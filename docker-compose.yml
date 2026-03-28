@@ -1,0 +1,201 @@
+services:
+
+  # === Certificate Generator (runs first) ===
+  certs-generator:
+    image: alpine:3.19
+    volumes:
+      - ./certs:/certs
+      - ./scripts:/scripts
+    entrypoint: ["/bin/sh", "/scripts/generate-certs.sh"]
+
+  # === Server 1: No Security (Port 4840) ===
+  # Basic connectivity testing, no encryption, anonymous only
+  opcua-no-security:
+    build: .
+    ports:
+      - "4840:4840"
+    volumes:
+      - ./certs:/app/certs
+      - ./config:/app/config:ro
+    environment:
+      OPCUA_PORT: "4840"
+      OPCUA_SERVER_NAME: "NoSecurityServer"
+      OPCUA_SECURITY_POLICIES: "None"
+      OPCUA_SECURITY_MODES: "None"
+      OPCUA_ALLOW_ANONYMOUS: "true"
+      OPCUA_AUTH_USERS: "false"
+      OPCUA_AUTH_CERTIFICATE: "false"
+      OPCUA_AUTO_ACCEPT_CERTS: "true"
+    depends_on:
+      certs-generator:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "dotnet", "TestServer.dll", "--health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    restart: unless-stopped
+
+  # === Server 2: Username/Password (Port 4841) ===
+  # Encrypted channel with credential-based authentication
+  opcua-userpass:
+    build: .
+    ports:
+      - "4841:4841"
+    volumes:
+      - ./certs:/app/certs
+      - ./config:/app/config:ro
+    environment:
+      OPCUA_PORT: "4841"
+      OPCUA_SERVER_NAME: "UserPassServer"
+      OPCUA_SECURITY_POLICIES: "Basic256Sha256"
+      OPCUA_SECURITY_MODES: "SignAndEncrypt"
+      OPCUA_ALLOW_ANONYMOUS: "false"
+      OPCUA_AUTH_USERS: "true"
+      OPCUA_AUTH_CERTIFICATE: "false"
+      OPCUA_AUTO_ACCEPT_CERTS: "true"
+    depends_on:
+      certs-generator:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  # === Server 3: Certificate Auth (Port 4842) ===
+  # Multiple security policies, X.509 certificate authentication
+  opcua-certificate:
+    build: .
+    ports:
+      - "4842:4842"
+    volumes:
+      - ./certs:/app/certs
+      - ./config:/app/config:ro
+    environment:
+      OPCUA_PORT: "4842"
+      OPCUA_SERVER_NAME: "CertificateServer"
+      OPCUA_SECURITY_POLICIES: "Basic256Sha256,Aes128_Sha256_RsaOaep,Aes256_Sha256_RsaPss"
+      OPCUA_SECURITY_MODES: "Sign,SignAndEncrypt"
+      OPCUA_ALLOW_ANONYMOUS: "false"
+      OPCUA_AUTH_USERS: "false"
+      OPCUA_AUTH_CERTIFICATE: "true"
+      OPCUA_AUTO_ACCEPT_CERTS: "false"
+    depends_on:
+      certs-generator:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  # === Server 4: All Security (Port 4843) ===
+  # All 6 security policies, all 3 modes, all auth methods
+  opcua-all-security:
+    build: .
+    ports:
+      - "4843:4843"
+    volumes:
+      - ./certs:/app/certs
+      - ./config:/app/config:ro
+    environment:
+      OPCUA_PORT: "4843"
+      OPCUA_SERVER_NAME: "AllSecurityServer"
+      OPCUA_SECURITY_POLICIES: "None,Basic128Rsa15,Basic256,Basic256Sha256,Aes128_Sha256_RsaOaep,Aes256_Sha256_RsaPss"
+      OPCUA_SECURITY_MODES: "None,Sign,SignAndEncrypt"
+      OPCUA_ALLOW_ANONYMOUS: "true"
+      OPCUA_AUTH_USERS: "true"
+      OPCUA_AUTH_CERTIFICATE: "true"
+      OPCUA_AUTO_ACCEPT_CERTS: "true"
+    depends_on:
+      certs-generator:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  # === Server 5: Discovery Server (Port 4844) ===
+  # OPC UA Discovery (FindServers, GetEndpoints)
+  opcua-discovery:
+    build: .
+    ports:
+      - "4844:4844"
+    volumes:
+      - ./certs:/app/certs
+      - ./config:/app/config:ro
+    environment:
+      OPCUA_PORT: "4844"
+      OPCUA_SERVER_NAME: "DiscoveryServer"
+      OPCUA_RESOURCE_PATH: ""
+      OPCUA_SECURITY_POLICIES: "None,Basic256Sha256"
+      OPCUA_SECURITY_MODES: "None,SignAndEncrypt"
+      OPCUA_ALLOW_ANONYMOUS: "true"
+      OPCUA_AUTH_USERS: "false"
+      OPCUA_AUTH_CERTIFICATE: "false"
+      OPCUA_IS_DISCOVERY: "true"
+      OPCUA_AUTO_ACCEPT_CERTS: "true"
+    depends_on:
+      certs-generator:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  # === Server 6: Auto-Accept Certs (Port 4845) ===
+  # Automatically trusts all client certificates
+  opcua-auto-accept:
+    build: .
+    ports:
+      - "4845:4845"
+    volumes:
+      - ./certs:/app/certs
+      - ./config:/app/config:ro
+    environment:
+      OPCUA_PORT: "4845"
+      OPCUA_SERVER_NAME: "AutoAcceptServer"
+      OPCUA_SECURITY_POLICIES: "Basic256Sha256"
+      OPCUA_SECURITY_MODES: "SignAndEncrypt"
+      OPCUA_ALLOW_ANONYMOUS: "false"
+      OPCUA_AUTH_USERS: "true"
+      OPCUA_AUTH_CERTIFICATE: "true"
+      OPCUA_AUTO_ACCEPT_CERTS: "true"
+    depends_on:
+      certs-generator:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  # === Server 7: Sign Only (Port 4846) ===
+  # Message signing without encryption
+  opcua-sign-only:
+    build: .
+    ports:
+      - "4846:4846"
+    volumes:
+      - ./certs:/app/certs
+      - ./config:/app/config:ro
+    environment:
+      OPCUA_PORT: "4846"
+      OPCUA_SERVER_NAME: "SignOnlyServer"
+      OPCUA_SECURITY_POLICIES: "Basic256Sha256"
+      OPCUA_SECURITY_MODES: "Sign"
+      OPCUA_ALLOW_ANONYMOUS: "true"
+      OPCUA_AUTH_USERS: "true"
+      OPCUA_AUTH_CERTIFICATE: "false"
+      OPCUA_AUTO_ACCEPT_CERTS: "true"
+    depends_on:
+      certs-generator:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  # === Server 8: Legacy Security (Port 4847) ===
+  # Deprecated security policies for backward compatibility testing
+  opcua-legacy:
+    build: .
+    ports:
+      - "4847:4847"
+    volumes:
+      - ./certs:/app/certs
+      - ./config:/app/config:ro
+    environment:
+      OPCUA_PORT: "4847"
+      OPCUA_SERVER_NAME: "LegacySecurityServer"
+      OPCUA_SECURITY_POLICIES: "Basic128Rsa15,Basic256"
+      OPCUA_SECURITY_MODES: "Sign,SignAndEncrypt"
+      OPCUA_ALLOW_ANONYMOUS: "true"
+      OPCUA_AUTH_USERS: "true"
+      OPCUA_AUTH_CERTIFICATE: "false"
+      OPCUA_AUTO_ACCEPT_CERTS: "true"
+    depends_on:
+      certs-generator:
+        condition: service_completed_successfully
+    restart: unless-stopped

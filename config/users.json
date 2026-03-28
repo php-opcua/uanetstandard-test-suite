@@ -1,0 +1,26 @@
+[
+  {
+    "username": "admin",
+    "password": "admin123",
+    "role": "admin",
+    "permissions": ["AuthenticatedUser", "ConfigureAdmin", "SecurityAdmin", "Operator", "Engineer"]
+  },
+  {
+    "username": "operator",
+    "password": "operator123",
+    "role": "operator",
+    "permissions": ["AuthenticatedUser", "Operator"]
+  },
+  {
+    "username": "viewer",
+    "password": "viewer123",
+    "role": "viewer",
+    "permissions": ["AuthenticatedUser"]
+  },
+  {
+    "username": "test",
+    "password": "test",
+    "role": "admin",
+    "permissions": ["AuthenticatedUser", "ConfigureAdmin", "SecurityAdmin", "Operator", "Engineer"]
+  }
+]

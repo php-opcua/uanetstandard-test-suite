@@ -1,0 +1,30 @@
+# .NET
+bin/
+obj/
+*.user
+*.suo
+*.vs/
+*.DotSettings.user
+
+# Certificates (generated at runtime)
+certs/ca/
+certs/server/
+certs/client/
+certs/trusted/
+certs/rejected/
+certs/self-signed/
+certs/expired/
+certs/pki/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+docker-compose.override.yml

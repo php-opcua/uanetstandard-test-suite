@@ -1,0 +1,29 @@
+# CI/CD variant - overrides for GitHub Actions / CI pipelines
+# Usage: docker compose -f docker-compose.yml -f docker-compose.ci.yml up -d
+
+services:
+  opcua-no-security:
+    restart: "no"
+    healthcheck:
+      disable: true
+
+  opcua-userpass:
+    restart: "no"
+
+  opcua-certificate:
+    restart: "no"
+
+  opcua-all-security:
+    restart: "no"
+
+  opcua-discovery:
+    restart: "no"
+
+  opcua-auto-accept:
+    restart: "no"
+
+  opcua-sign-only:
+    restart: "no"
+
+  opcua-legacy:
+    restart: "no"
