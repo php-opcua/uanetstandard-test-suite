@@ -27,7 +27,7 @@ public class MethodsBuilder
             {
                 var a = (double)input[0];
                 var b = (double)input[1];
-                output.Add(a + b);
+                output[0] = a + b;
             },
             new[] { Arg("a", DataTypeIds.Double, "First operand"), Arg("b", DataTypeIds.Double, "Second operand") },
             new[] { Arg("result", DataTypeIds.Double, "Sum") });
@@ -38,7 +38,7 @@ public class MethodsBuilder
             {
                 var a = (double)input[0];
                 var b = (double)input[1];
-                output.Add(a * b);
+                output[0] = a * b;
             },
             new[] { Arg("a", DataTypeIds.Double, "First operand"), Arg("b", DataTypeIds.Double, "Second operand") },
             new[] { Arg("result", DataTypeIds.Double, "Product") });
@@ -49,7 +49,7 @@ public class MethodsBuilder
             {
                 var a = (string)input[0];
                 var b = (string)input[1];
-                output.Add(a + b);
+                output[0] = a + b;
             },
             new[] { Arg("a", DataTypeIds.String, "First string"), Arg("b", DataTypeIds.String, "Second string") },
             new[] { Arg("result", DataTypeIds.String, "Concatenated string") });
@@ -59,7 +59,7 @@ public class MethodsBuilder
             (input, output) =>
             {
                 var s = (string)input[0];
-                output.Add(new string(s.Reverse().ToArray()));
+                output[0] = new string(s.Reverse().ToArray());
             },
             new[] { Arg("input", DataTypeIds.String, "Input string") },
             new[] { Arg("result", DataTypeIds.String, "Reversed string") });
@@ -68,7 +68,7 @@ public class MethodsBuilder
         _mgr.CreateMethod(folder, $"{p}/GetServerTime", "GetServerTime",
             (input, output) =>
             {
-                output.Add(DateTime.UtcNow);
+                output[0] = DateTime.UtcNow;
             },
             Array.Empty<Argument>(),
             new[] { Arg("time", DataTypeIds.DateTime, "Current server time") });
@@ -77,7 +77,7 @@ public class MethodsBuilder
         _mgr.CreateMethod(folder, $"{p}/Echo", "Echo",
             (input, output) =>
             {
-                output.Add(input[0]);
+                output[0] = input[0];
             },
             new[] { Arg("input", DataTypeIds.BaseDataType, "Value to echo") },
             new[] { Arg("output", DataTypeIds.BaseDataType, "Echoed value") });
@@ -99,7 +99,7 @@ public class MethodsBuilder
             {
                 var duration = (uint)input[0];
                 Thread.Sleep((int)Math.Min(duration, 30000));
-                output.Add(true);
+                output[0] = true;
             },
             new[] { Arg("durationMs", DataTypeIds.UInt32, "Duration in milliseconds") },
             new[] { Arg("completed", DataTypeIds.Boolean, "Completion status") });
@@ -118,7 +118,7 @@ public class MethodsBuilder
             (input, output) =>
             {
                 var values = (double[])input[0];
-                output.Add(values.Sum());
+                output[0] = values.Sum();
             },
             new[] { ArgArray("values", DataTypeIds.Double, "Array of doubles") },
             new[] { Arg("sum", DataTypeIds.Double, "Sum of values") });
@@ -134,7 +134,7 @@ public class MethodsBuilder
                 for (var r = 0; r < rows; r++)
                     for (var c = 0; c < cols; c++)
                         result[c * rows + r] = matrix[r * cols + c];
-                output.Add(result);
+                output[0] = result;
             },
             new[] { ArgArray("matrix", DataTypeIds.Double, "Flat matrix"), Arg("rows", DataTypeIds.UInt32, "Row count"), Arg("cols", DataTypeIds.UInt32, "Column count") },
             new[] { ArgArray("result", DataTypeIds.Double, "Transposed matrix") });
@@ -143,9 +143,9 @@ public class MethodsBuilder
         _mgr.CreateMethod(folder, $"{p}/MultiOutput", "MultiOutput",
             (input, output) =>
             {
-                output.Add(42);
-                output.Add("hello");
-                output.Add(true);
+                output[0] = 42;
+                output[1] = "hello";
+                output[2] = true;
             },
             Array.Empty<Argument>(),
             new[]

@@ -22,7 +22,7 @@ public class ServerConfig
     // Certificates
     public string CertificateFile { get; set; } = "/app/certs/server/cert.pem";
     public string PrivateKeyFile { get; set; } = "/app/certs/server/key.pem";
-    public string TrustedCertsDir { get; set; } = "/app/certs/pki/trusted";
+    public string TrustedCertsDir { get; set; } = "/app/certs/trusted";
     public string RejectedCertsDir { get; set; } = "/app/certs/pki/rejected";
     public string PkiIssuersDir { get; set; } = "/app/certs/pki/issuers";
     public string CaCertFile { get; set; } = "/app/certs/ca/ca-cert.pem";

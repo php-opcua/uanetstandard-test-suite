@@ -48,7 +48,9 @@ public class DataTypesBuilder
         _mgr.CreateVariable<DateTime>(folder, $"{p}/DateTimeValue", "DateTimeValue", DataTypeIds.DateTime, ValueRanks.Scalar, DateTime.UtcNow);
         _mgr.CreateVariable<Guid>(folder, $"{p}/GuidValue", "GuidValue", DataTypeIds.Guid, ValueRanks.Scalar, Guid.NewGuid());
         _mgr.CreateVariable<byte[]>(folder, $"{p}/ByteStringValue", "ByteStringValue", DataTypeIds.ByteString, ValueRanks.Scalar, new byte[] { 0x01, 0x02, 0x03, 0x04 });
-        _mgr.CreateVariable<XmlElement>(folder, $"{p}/XmlElementValue", "XmlElementValue", DataTypeIds.XmlElement, ValueRanks.Scalar, default(XmlElement)!);
+        var xmlDoc = new XmlDocument();
+        xmlDoc.LoadXml("<test>Hello OPC UA</test>");
+        _mgr.CreateVariable<XmlElement>(folder, $"{p}/XmlElementValue", "XmlElementValue", DataTypeIds.XmlElement, ValueRanks.Scalar, xmlDoc.DocumentElement!);
         _mgr.CreateVariable<NodeId>(folder, $"{p}/NodeIdValue", "NodeIdValue", DataTypeIds.NodeId, ValueRanks.Scalar, new NodeId(1234, 0));
         _mgr.CreateVariable<ExpandedNodeId>(folder, $"{p}/ExpandedNodeIdValue", "ExpandedNodeIdValue", DataTypeIds.ExpandedNodeId, ValueRanks.Scalar, new ExpandedNodeId(5678, 0));
         _mgr.CreateVariable<StatusCode>(folder, $"{p}/StatusCodeValue", "StatusCodeValue", DataTypeIds.StatusCode, ValueRanks.Scalar, StatusCodes.Good);
@@ -148,11 +150,11 @@ public class DataTypesBuilder
         var folder = _mgr.CreateFolder(parent, "TestServer/DataTypes/MultiDimensional", "MultiDimensional");
         var p = "TestServer/DataTypes/MultiDimensional";
 
-        // 2x3 Double matrix
+        // 3x3 Double matrix
         var matrix2d = _mgr.CreateVariableUntyped(folder, $"{p}/Matrix2D_Double", "Matrix2D_Double",
             DataTypeIds.Double, ValueRanks.TwoDimensions,
-            new double[,] { { 1.0, 2.0, 3.0 }, { 4.0, 5.0, 6.0 } });
-        matrix2d.ArrayDimensions = new ReadOnlyList<uint>(new uint[] { 2, 3 });
+            new double[,] { { 1.0, 2.0, 3.0 }, { 4.0, 5.0, 6.0 }, { 7.0, 8.0, 9.0 } });
+        matrix2d.ArrayDimensions = new ReadOnlyList<uint>(new uint[] { 3, 3 });
 
         // 2x4 Int32 matrix
         var matrix2i = _mgr.CreateVariableUntyped(folder, $"{p}/Matrix2D_Int32", "Matrix2D_Int32",
@@ -177,38 +179,43 @@ public class DataTypesBuilder
         temp.Create(_context, new NodeId($"{p}/Temperature", _mgr.NamespaceIndex),
             new QualifiedName("Temperature", _mgr.NamespaceIndex),
             new LocalizedText("en", "Temperature"), true);
+        temp.ReferenceTypeId = ReferenceTypeIds.Organizes;
         temp.DataType = DataTypeIds.Double;
         temp.ValueRank = ValueRanks.Scalar;
         temp.AccessLevel = AccessLevels.CurrentReadOrWrite;
         temp.UserAccessLevel = AccessLevels.CurrentReadOrWrite;
-        temp.Value = 25.0;
+        temp.Value = 22.5;
         temp.StatusCode = StatusCodes.Good;
         temp.Timestamp = DateTime.UtcNow;
         temp.InstrumentRange.Value = new Range(-40.0, 120.0);
         temp.EURange.Value = new Range(0.0, 100.0);
         temp.EngineeringUnits.Value = new EUInformation("°C", "degree Celsius", "http://www.opcfoundation.org/UA/units/un/cefact");
+        folder.AddChild(temp);
         _mgr.AddNode(_context, temp);
 
         var press = new AnalogItemState<double>(folder);
         press.Create(_context, new NodeId($"{p}/Pressure", _mgr.NamespaceIndex),
             new QualifiedName("Pressure", _mgr.NamespaceIndex),
             new LocalizedText("en", "Pressure"), true);
+        press.ReferenceTypeId = ReferenceTypeIds.Organizes;
         press.DataType = DataTypeIds.Double;
         press.ValueRank = ValueRanks.Scalar;
         press.AccessLevel = AccessLevels.CurrentReadOrWrite;
         press.UserAccessLevel = AccessLevels.CurrentReadOrWrite;
-        press.Value = 1013.25;
+        press.Value = 101.325;
         press.StatusCode = StatusCodes.Good;
         press.Timestamp = DateTime.UtcNow;
         press.InstrumentRange.Value = new Range(0.0, 2000.0);
         press.EURange.Value = new Range(800.0, 1200.0);
         press.EngineeringUnits.Value = new EUInformation("hPa", "hectopascal", "http://www.opcfoundation.org/UA/units/un/cefact");
+        folder.AddChild(press);
         _mgr.AddNode(_context, press);
 
         var roVal = new AnalogItemState<double>(folder);
         roVal.Create(_context, new NodeId($"{p}/ReadOnlyValue", _mgr.NamespaceIndex),
             new QualifiedName("ReadOnlyValue", _mgr.NamespaceIndex),
             new LocalizedText("en", "ReadOnlyValue"), true);
+        roVal.ReferenceTypeId = ReferenceTypeIds.Organizes;
         roVal.DataType = DataTypeIds.Double;
         roVal.ValueRank = ValueRanks.Scalar;
         roVal.AccessLevel = AccessLevels.CurrentRead;
@@ -218,6 +225,7 @@ public class DataTypesBuilder
         roVal.Timestamp = DateTime.UtcNow;
         roVal.InstrumentRange.Value = new Range(0.0, 100.0);
         roVal.EURange.Value = new Range(0.0, 100.0);
+        folder.AddChild(roVal);
         _mgr.AddNode(_context, roVal);
     }
 }

@@ -1,4 +1,5 @@
 using Opc.Ua;
+using Opc.Ua.Server;
 using TestServer.Server;
 using TestServer.UserManagement;
 
@@ -73,14 +74,61 @@ public class AccessControlBuilder
         var folder = _mgr.CreateFolder(parent, $"{basePath}/OperatorLevel", "OperatorLevel");
         var p = $"{basePath}/OperatorLevel";
 
-        _mgr.CreateVariable<double>(folder, $"{p}/Setpoint", "Setpoint",
-            DataTypeIds.Double, ValueRanks.Scalar, 50.0);
-        _mgr.CreateVariable<int>(folder, $"{p}/MotorSpeed", "MotorSpeed",
-            DataTypeIds.Int32, ValueRanks.Scalar, 1500);
-        _mgr.CreateVariable<bool>(folder, $"{p}/ProcessEnabled", "ProcessEnabled",
-            DataTypeIds.Boolean, ValueRanks.Scalar, true);
-        _mgr.CreateVariable<string>(folder, $"{p}/RecipeName", "RecipeName",
-            DataTypeIds.String, ValueRanks.Scalar, "Recipe_A");
+        CreateRoleProtectedVariable<double>(folder, $"{p}/Setpoint", "Setpoint",
+            DataTypeIds.Double, ValueRanks.Scalar, 50.0, "operator");
+        CreateRoleProtectedVariable<int>(folder, $"{p}/MotorSpeed", "MotorSpeed",
+            DataTypeIds.Int32, ValueRanks.Scalar, 1500, "operator");
+        CreateRoleProtectedVariable<bool>(folder, $"{p}/ProcessEnabled", "ProcessEnabled",
+            DataTypeIds.Boolean, ValueRanks.Scalar, true, "operator");
+        CreateRoleProtectedVariable<string>(folder, $"{p}/RecipeName", "RecipeName",
+            DataTypeIds.String, ValueRanks.Scalar, "Recipe_A", "operator");
+    }
+
+    private void CreateRoleProtectedVariable<T>(
+        NodeState parent, string path, string name,
+        NodeId dataType, int valueRank, T defaultValue,
+        string minimumRole)
+    {
+        var variable = _mgr.CreateVariable<T>(parent, path, name, dataType, valueRank, defaultValue);
+
+        variable.OnWriteValue = (ISystemContext context, NodeState node, NumericRange indexRange,
+            QualifiedName dataEncoding, ref object value, ref StatusCode statusCode, ref DateTime timestamp) =>
+        {
+            var username = GetUsername(context);
+            if (username == null)
+            {
+                // Anonymous user - deny write
+                return StatusCodes.BadUserAccessDenied;
+            }
+
+            var hasAccess = minimumRole switch
+            {
+                "admin" => _userManager.IsAdmin(username),
+                "operator" => _userManager.IsOperator(username),
+                _ => true
+            };
+
+            if (!hasAccess)
+            {
+                return StatusCodes.BadUserAccessDenied;
+            }
+
+            return ServiceResult.Good;
+        };
+    }
+
+    private static string? GetUsername(ISystemContext context)
+    {
+        if (context is ISessionSystemContext sessionContext)
+        {
+            var identity = sessionContext.UserIdentity;
+            if (identity != null)
+            {
+                return identity.DisplayName;
+            }
+        }
+
+        return null;
     }
 
     private void BuildViewerLevel(FolderState parent, string basePath)

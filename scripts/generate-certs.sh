@@ -74,7 +74,7 @@ extendedKeyUsage = serverAuth, clientAuth
 subjectAltName = @alt_names
 
 [alt_names]
-URI.1 = urn:opcua:testserver
+URI.1 = urn:opcua:testserver:nodes
 DNS.1 = localhost
 DNS.2 = opcua-no-security
 DNS.3 = opcua-userpass

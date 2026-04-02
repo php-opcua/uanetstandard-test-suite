@@ -1,0 +1,76 @@
+name: 'UA-.NETStandard Test Suite'
+description: 'Start 8 pre-configured OPC UA test servers (.NET 8.0) covering all security policies and auth methods.'
+author: 'Gianfrancesco Aurecchia'
+
+branding:
+  icon: 'server'
+  color: 'blue'
+
+inputs:
+  servers:
+    description: 'Comma-separated list of servers to start, or "all". Options: no-security, userpass, certificate, all-security, discovery, auto-accept, sign-only, legacy'
+    required: false
+    default: 'all'
+  wait-timeout:
+    description: 'Seconds to wait for servers to be ready'
+    required: false
+    default: '120'
+
+outputs:
+  certs-dir:
+    description: 'Path to the generated certificates directory'
+    value: ${{ steps.extract-certs.outputs.certs-dir }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Checkout server suite
+      uses: actions/checkout@v6
+      with:
+        repository: php-opcua/uanetstandard-test-suite
+        path: .uanetstandard-test-suite
+
+    - name: Select servers to start
+      id: profiles
+      shell: bash
+      run: |
+        SERVERS="${{ inputs.servers }}"
+
+        if [ "$SERVERS" = "all" ]; then
+          echo "compose-args=" >> "$GITHUB_OUTPUT"
+        else
+          ALL_SERVICES="opcua-no-security opcua-userpass opcua-certificate opcua-all-security opcua-discovery opcua-auto-accept opcua-sign-only opcua-legacy"
+          WANTED=""
+          IFS=',' read -ra ITEMS <<< "$SERVERS"
+          for item in "${ITEMS[@]}"; do
+            trimmed=$(echo "$item" | xargs)
+            WANTED="$WANTED opcua-${trimmed}"
+          done
+
+          SCALE_ARGS=""
+          for svc in $ALL_SERVICES; do
+            if ! echo "$WANTED" | grep -qw "$svc"; then
+              SCALE_ARGS="$SCALE_ARGS --scale ${svc}=0"
+            fi
+          done
+          echo "compose-args=$SCALE_ARGS" >> "$GITHUB_OUTPUT"
+        fi
+
+    - name: Build and start servers
+      shell: bash
+      working-directory: .uanetstandard-test-suite
+      run: docker compose up -d --build --wait --wait-timeout ${{ inputs.wait-timeout }} ${{ steps.profiles.outputs.compose-args }}
+
+    - name: Extract certificates
+      id: extract-certs
+      shell: bash
+      run: |
+        CERTS_DIR=".uanetstandard-test-suite/certs"
+        if [ ! -d "$CERTS_DIR/ca" ]; then
+          echo "::error::Certificates not found at $CERTS_DIR"
+          ls -la "$CERTS_DIR" 2>/dev/null || echo "Directory does not exist"
+          exit 1
+        fi
+        sudo chmod -R a+r "$CERTS_DIR"
+        echo "Certificates available at: $CERTS_DIR"
+        echo "certs-dir=$(realpath $CERTS_DIR)" >> "$GITHUB_OUTPUT"

@@ -12,16 +12,27 @@ public class TestNodeManager : CustomNodeManager2
     private readonly UserManager _userManager;
     private readonly List<IDisposable> _timers = new();
 
+    /// <summary>
+    /// In-memory historical data store, populated by HistoricalBuilder, queried by HistoryReadRawModified.
+    /// </summary>
+    public Dictionary<NodeId, List<DataValue>> HistoryStore { get; } = new();
+
     public TestNodeManager(
         IServerInternal server,
         ApplicationConfiguration configuration,
         ServerConfig config,
         UserManager userManager)
-        : base(server, configuration, "urn:opcua:testserver:nodes")
+        : base(server, configuration, new[] { "urn:opcua:testserver:nodes", "http://opcfoundation.org/UA/DI/", "urn:opcua:test-server:custom-types" })
     {
         _config = config;
         _userManager = userManager;
     }
+
+    /// <summary>
+    /// Namespace index for custom extension object types (urn:opcua:test-server:custom-types).
+    /// Expected to be ns=3 to match test expectations.
+    /// </summary>
+    public ushort CustomTypesNamespaceIndex => NamespaceIndexes.Count > 2 ? NamespaceIndexes[2] : NamespaceIndex;
 
     /// <summary>
     /// Exposes AddPredefinedNode to address space builders (it's protected in base class).
@@ -97,6 +108,39 @@ public class TestNodeManager : CustomNodeManager2
             }
 
             Console.WriteLine("Address space created successfully");
+
+            // Apply operation limits to standard server capability nodes
+            ApplyOperationLimits();
+        }
+    }
+
+    private void ApplyOperationLimits()
+    {
+        try
+        {
+            // MaxNodesPerRead (i=11705)
+            SetStandardNodeValue(new NodeId(11705, 0), (uint)_config.MaxNodesPerRead);
+            // MaxNodesPerWrite (i=11707)
+            SetStandardNodeValue(new NodeId(11707, 0), (uint)_config.MaxNodesPerWrite);
+            // MaxNodesPerBrowse (i=11710)
+            SetStandardNodeValue(new NodeId(11710, 0), (uint)_config.MaxNodesPerBrowse);
+
+            Console.WriteLine($"  [+] Operation limits: Read={_config.MaxNodesPerRead}, Write={_config.MaxNodesPerWrite}, Browse={_config.MaxNodesPerBrowse}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"  [!] Could not set operation limits: {ex.Message}");
+        }
+    }
+
+    private void SetStandardNodeValue(NodeId nodeId, object value)
+    {
+        // Find node through the server's DiagnosticsNodeManager which manages standard server nodes
+        var node = Server.DiagnosticsNodeManager.FindPredefinedNode(nodeId, typeof(BaseVariableState)) as BaseVariableState;
+        if (node != null)
+        {
+            node.Value = value;
+            node.ClearChangeMasks(SystemContext, false);
         }
     }
 
@@ -242,6 +286,55 @@ public class TestNodeManager : CustomNodeManager2
         parent.AddChild(method);
         AddPredefinedNode(SystemContext, method);
         return method;
+    }
+
+    protected override void HistoryReadRawModified(
+        ServerSystemContext context,
+        ReadRawModifiedDetails details,
+        TimestampsToReturn timestampsToReturn,
+        IList<HistoryReadValueId> nodesToRead,
+        IList<HistoryReadResult> results,
+        IList<ServiceResult> errors,
+        List<NodeHandle> nodesToProcess,
+        IDictionary<NodeId, NodeState> cache)
+    {
+        for (var i = 0; i < nodesToProcess.Count; i++)
+        {
+            var handle = nodesToProcess[i];
+            var nodeToRead = nodesToRead[handle.Index];
+
+            if (!HistoryStore.TryGetValue(handle.NodeId, out var history))
+            {
+                errors[handle.Index] = StatusCodes.BadHistoryOperationUnsupported;
+                continue;
+            }
+
+            List<DataValue> filtered;
+            lock (history)
+            {
+                filtered = history
+                    .Where(dv =>
+                        (details.StartTime == DateTime.MinValue || dv.SourceTimestamp >= details.StartTime) &&
+                        (details.EndTime == DateTime.MinValue || dv.SourceTimestamp <= details.EndTime))
+                    .OrderBy(dv => dv.SourceTimestamp)
+                    .ToList();
+            }
+
+            if (details.NumValuesPerNode > 0 && filtered.Count > (int)details.NumValuesPerNode)
+            {
+                filtered = filtered.Take((int)details.NumValuesPerNode).ToList();
+            }
+
+            var historyData = new HistoryData();
+            historyData.DataValues.AddRange(filtered);
+
+            results[handle.Index] = new HistoryReadResult
+            {
+                HistoryData = new ExtensionObject(historyData),
+                StatusCode = StatusCodes.Good
+            };
+            errors[handle.Index] = StatusCodes.Good;
+        }
     }
 
     protected override void Dispose(bool disposing)

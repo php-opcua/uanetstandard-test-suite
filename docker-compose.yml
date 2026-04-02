@@ -26,6 +26,8 @@ services:
       OPCUA_AUTH_USERS: "false"
       OPCUA_AUTH_CERTIFICATE: "false"
       OPCUA_AUTO_ACCEPT_CERTS: "true"
+      OPCUA_MAX_NODES_PER_READ: "5"
+      OPCUA_MAX_NODES_PER_WRITE: "5"
     depends_on:
       certs-generator:
         condition: service_completed_successfully
@@ -145,7 +147,7 @@ services:
       OPCUA_SERVER_NAME: "AutoAcceptServer"
       OPCUA_SECURITY_POLICIES: "Basic256Sha256"
       OPCUA_SECURITY_MODES: "SignAndEncrypt"
-      OPCUA_ALLOW_ANONYMOUS: "false"
+      OPCUA_ALLOW_ANONYMOUS: "true"
       OPCUA_AUTH_USERS: "true"
       OPCUA_AUTH_CERTIFICATE: "true"
       OPCUA_AUTO_ACCEPT_CERTS: "true"

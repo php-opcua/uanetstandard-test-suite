@@ -39,8 +39,8 @@ public class HistoricalBuilder
             DataTypeIds.Boolean, ValueRanks.Scalar, false, historyReadAccess);
         histBool.Historizing = true;
 
-        // In-memory history storage
-        var historyStore = new Dictionary<NodeId, List<DataValue>>();
+        // Register history store in the node manager so HistoryRead can access it
+        var historyStore = _mgr.HistoryStore;
         historyStore[histTemp.NodeId] = new List<DataValue>();
         historyStore[histPressure.NodeId] = new List<DataValue>();
         historyStore[histCounter.NodeId] = new List<DataValue>();
@@ -50,7 +50,7 @@ public class HistoricalBuilder
         uint counterVal = 0;
         const int maxHistorySize = 10000;
 
-        // Record historical values every 100ms
+        // Record historical values every 1000ms (matching node-opcua test server)
         timers.Add(new Timer(_ =>
         {
             var now = DateTime.UtcNow;
@@ -82,23 +82,26 @@ public class HistoricalBuilder
             histBool.Timestamp = now;
             histBool.ClearChangeMasks(_context, false);
             AddHistoryValue(historyStore, histBool.NodeId, boolVal, now, maxHistorySize);
-        }, null, 100, 100));
+        }, null, 1000, 1000));
     }
 
     private static void AddHistoryValue(Dictionary<NodeId, List<DataValue>> store, NodeId nodeId, object value, DateTime timestamp, int maxSize)
     {
         var list = store[nodeId];
-        list.Add(new DataValue
+        lock (list)
         {
-            Value = value,
-            StatusCode = StatusCodes.Good,
-            SourceTimestamp = timestamp,
-            ServerTimestamp = timestamp
-        });
+            list.Add(new DataValue
+            {
+                Value = value,
+                StatusCode = StatusCodes.Good,
+                SourceTimestamp = timestamp,
+                ServerTimestamp = timestamp
+            });
 
-        if (list.Count > maxSize)
-        {
-            list.RemoveRange(0, list.Count - maxSize);
+            if (list.Count > maxSize)
+            {
+                list.RemoveRange(0, list.Count - maxSize);
+            }
         }
     }
 }

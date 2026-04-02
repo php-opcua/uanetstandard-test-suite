@@ -46,16 +46,16 @@ public class EventsAlarmsBuilder
         {
             try
             {
-                var e = new BaseEventState(null);
-                e.Initialize(_context, null);
-                e.EventId = new PropertyState<byte[]>(e) { Value = Guid.NewGuid().ToByteArray() };
-                e.EventType = new PropertyState<NodeId>(e) { Value = ObjectTypeIds.BaseEventType };
-                e.SourceNode = new PropertyState<NodeId>(e) { Value = emitter.NodeId };
-                e.SourceName = new PropertyState<string>(e) { Value = "EventEmitter" };
-                e.Time = new PropertyState<DateTime>(e) { Value = DateTime.UtcNow };
-                e.ReceiveTime = new PropertyState<DateTime>(e) { Value = DateTime.UtcNow };
-                e.Severity = new PropertyState<ushort>(e) { Value = 200 };
-                e.Message = new PropertyState<LocalizedText>(e) { Value = new LocalizedText("en", $"Simple event #{++counter}") };
+                var e = new BaseEventState(emitter);
+                e.Initialize(_context, emitter, EventSeverity.Low, new LocalizedText(""));
+                e.EventId.Value = Guid.NewGuid().ToByteArray();
+                e.EventType.Value = ObjectTypeIds.BaseEventType;
+                e.SourceNode.Value = emitter.NodeId;
+                e.SourceName.Value = "EventEmitter";
+                e.Time.Value = DateTime.UtcNow;
+                e.ReceiveTime.Value = DateTime.UtcNow;
+                e.Severity.Value = 200;
+                e.Message.Value = new LocalizedText("en", $"Simple event #{++counter}");
 
                 emitter.ReportEvent(_context, e);
             }
@@ -70,16 +70,16 @@ public class EventsAlarmsBuilder
         {
             try
             {
-                var e = new BaseEventState(null);
-                e.Initialize(_context, null);
-                e.EventId = new PropertyState<byte[]>(e) { Value = Guid.NewGuid().ToByteArray() };
-                e.EventType = new PropertyState<NodeId>(e) { Value = ObjectTypeIds.BaseEventType };
-                e.SourceNode = new PropertyState<NodeId>(e) { Value = emitter.NodeId };
-                e.SourceName = new PropertyState<string>(e) { Value = "EventEmitter" };
-                e.Time = new PropertyState<DateTime>(e) { Value = DateTime.UtcNow };
-                e.ReceiveTime = new PropertyState<DateTime>(e) { Value = DateTime.UtcNow };
-                e.Severity = new PropertyState<ushort>(e) { Value = 500 };
-                e.Message = new PropertyState<LocalizedText>(e) { Value = new LocalizedText("en", $"Complex event: category=ProcessAlert, value={new Random().NextDouble():F3}") };
+                var e = new BaseEventState(emitter);
+                e.Initialize(_context, emitter, EventSeverity.Low, new LocalizedText(""));
+                e.EventId.Value = Guid.NewGuid().ToByteArray();
+                e.EventType.Value = ObjectTypeIds.BaseEventType;
+                e.SourceNode.Value = emitter.NodeId;
+                e.SourceName.Value = "EventEmitter";
+                e.Time.Value = DateTime.UtcNow;
+                e.ReceiveTime.Value = DateTime.UtcNow;
+                e.Severity.Value = 500;
+                e.Message.Value = new LocalizedText("en", $"Complex event: category=ProcessAlert, value={new Random().NextDouble():F3}");
 
                 emitter.ReportEvent(_context, e);
             }
@@ -95,19 +95,16 @@ public class EventsAlarmsBuilder
             try
             {
                 var rng = new Random();
-                var e = new BaseEventState(null);
-                e.Initialize(_context, null);
-                e.EventId = new PropertyState<byte[]>(e) { Value = Guid.NewGuid().ToByteArray() };
-                e.EventType = new PropertyState<NodeId>(e) { Value = ObjectTypeIds.SystemEventType };
-                e.SourceNode = new PropertyState<NodeId>(e) { Value = emitter.NodeId };
-                e.SourceName = new PropertyState<string>(e) { Value = "SystemMonitor" };
-                e.Time = new PropertyState<DateTime>(e) { Value = DateTime.UtcNow };
-                e.ReceiveTime = new PropertyState<DateTime>(e) { Value = DateTime.UtcNow };
-                e.Severity = new PropertyState<ushort>(e) { Value = 100 };
-                e.Message = new PropertyState<LocalizedText>(e)
-                {
-                    Value = new LocalizedText("en", $"System status: CPU={rng.Next(5, 95)}%, Memory={rng.Next(30, 80)}%")
-                };
+                var e = new BaseEventState(emitter);
+                e.Initialize(_context, emitter, EventSeverity.Low, new LocalizedText(""));
+                e.EventId.Value = Guid.NewGuid().ToByteArray();
+                e.EventType.Value = ObjectTypeIds.SystemEventType;
+                e.SourceNode.Value = emitter.NodeId;
+                e.SourceName.Value = "SystemMonitor";
+                e.Time.Value = DateTime.UtcNow;
+                e.ReceiveTime.Value = DateTime.UtcNow;
+                e.Severity.Value = 100;
+                e.Message.Value = new LocalizedText("en", $"System status: CPU={rng.Next(5, 95)}%, Memory={rng.Next(30, 80)}%");
 
                 emitter.ReportEvent(_context, e);
             }

@@ -10,6 +10,12 @@ public static class Program
 {
     public static async Task<int> Main(string[] args)
     {
+        // Health check: just exit 0 if --health flag is passed
+        if (args.Length > 0 && args[0] == "--health")
+        {
+            return 0;
+        }
+
         var config = ServerConfig.FromEnvironment();
 
         Console.WriteLine($"=== OPC UA .NET Standard Test Server ===");
@@ -83,13 +89,11 @@ public static class Program
             Directory.CreateDirectory(dir);
         }
 
-        // Copy pre-generated server cert into PKI own store
-        CopyIfExists(config.CertificateFile, "/tmp/pki/own/certs/");
-        CopyIfExists(config.PrivateKeyFile, "/tmp/pki/own/private/");
-
-        // Copy server DER cert
+        // NOTE: Do NOT copy pre-generated server certs to own store.
+        // UA-.NETStandard SDK auto-generates a server cert via CheckApplicationInstanceCertificates()
+        // with correct ApplicationUri, SubjectName, and properly stored private key.
+        // We only set up trusted/issuer certs here.
         var certDir = Path.GetDirectoryName(config.CertificateFile) ?? "/app/certs/server";
-        CopyIfExists(Path.Combine(certDir, "cert.der"), "/tmp/pki/own/certs/");
 
         // Copy trusted client certs
         if (Directory.Exists(config.TrustedCertsDir))
@@ -184,7 +188,7 @@ public static class Program
         var appConfig = new ApplicationConfiguration
         {
             ApplicationName = config.ServerName,
-            ApplicationUri = $"urn:opcua:testserver:{config.ServerName.ToLowerInvariant().Replace(" ", "")}",
+            ApplicationUri = "urn:opcua:testserver:nodes",
             ProductUri = "urn:opcua:testserver",
             ApplicationType = ApplicationType.Server,
 
@@ -245,7 +249,9 @@ public static class Program
                 MaxSubscriptionLifetime = 3600000,
                 MaxMessageQueueSize = 100,
                 MaxNotificationQueueSize = 100,
-                MaxNotificationsPerPublish = 1000
+                MaxNotificationsPerPublish = 1000,
+                MaxBrowseContinuationPoints = 100,
+                MaxHistoryContinuationPoints = 100
             },
 
             TraceConfiguration = new TraceConfiguration

@@ -1,6 +1,77 @@
-# UA-.NETStandard Test Suite
+<h1 align="center"><strong>UA-.NETStandard Test Suite</strong></h1>
 
-OPC UA test server infrastructure based on the [OPC Foundation UA-.NETStandard](https://github.com/OPCFoundation/UA-.NETStandard) library. Provides 8 pre-configured server instances via Docker Compose for comprehensive integration testing of OPC UA client libraries.
+<div align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/logo-dark.svg">
+    <source media="(prefers-color-scheme: light)" srcset="assets/logo-light.svg">
+    <img alt="UA-.NETStandard Test Suite" src="./assets/logo-light.svg" width="290">
+  </picture>
+</div>
+
+<p align="center">
+  <a href="https://github.com/php-opcua/uanetstandard-test-suite/releases"><img src="https://img.shields.io/github/v/release/php-opcua/uanetstandard-test-suite?label=version&color=6366F1" alt="Version"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="License: MIT"></a>
+  <a href="https://github.com/php-opcua/uanetstandard-test-suite/pkgs/container/uanetstandard-test-suite"><img src="https://img.shields.io/badge/docker-ghcr.io-blue?logo=docker&logoColor=white" alt="Docker"></a>
+  <a href="https://dotnet.microsoft.com/"><img src="https://img.shields.io/badge/.NET-8.0-512BD4?logo=dotnet&logoColor=white" alt=".NET 8.0"></a>
+  <a href="https://github.com/OPCFoundation/UA-.NETStandard"><img src="https://img.shields.io/badge/OPC_UA-UA--NETStandard-4F46E5" alt="UA-.NETStandard"></a>
+</p>
+
+---
+
+A comprehensive, ready-to-use OPC UA suite built specifically for **integration testing of OPC UA client libraries**. Built on the [OPC Foundation UA-.NETStandard](https://github.com/OPCFoundation/UA-.NETStandard) library (.NET 8.0), it provides 8 pre-configured server instances covering every major security policy, authentication method, and communication mode defined by the OPC UA specification.
+
+Whether you're building an OPC UA client in Rust, C#, Python, Go, Java, PHP, or any other language, this suite gives you a realistic test environment with ~300 nodes, 12 callable methods, dynamic variables, events, alarms, historical data, structured objects, and custom extension objects — all running with a single `docker compose up`.
+
+> **Note:** This project is the evolution of [`php-opcua/opcua-test-suite`](https://github.com/php-opcua/opcua-test-suite) (v1.1.5), which was based on Node.js and [node-opcua](https://github.com/node-opcua/node-opcua). The switch to [UA-.NETStandard](https://github.com/OPCFoundation/UA-.NETStandard) was made because it is the **reference implementation** maintained directly by the OPC Foundation — the same organization that defines the OPC UA specification. This makes it the de facto standard for OPC UA server implementations: protocol behavior, encoding, and security are as close to the spec as possible, giving you higher confidence that your client tests reflect real-world interoperability.
+
+## What's Inside
+
+| Port | Server | What it tests |
+|---|---|---|
+| 4840 | No Security | Basic connectivity, anonymous access |
+| 4841 | Username/Password | Encrypted channel + credential authentication |
+| 4842 | Certificate Auth | X.509 certificate-based authentication |
+| 4843 | All Security | Every policy, every mode, every auth method |
+| 4844 | Discovery | OPC UA Discovery Server (FindServers) |
+| 4845 | Auto-Accept | Encrypted with auto-trust for any client cert |
+| 4846 | Sign Only | Message signing without encryption |
+| 4847 | Legacy Security | Deprecated policies (Basic128Rsa15, Basic256) |
+
+All servers share the same rich address space:
+
+- **21 scalar data types** (Boolean through LocalizedText) in read/write and read-only variants
+- **20 array types** + 14 empty arrays + 6 read-only arrays
+- **3 multi-dimensional matrices** (2D and 3D)
+- **12 methods** — arithmetic, string ops, arrays, async, error handling, event generation
+- **13 dynamic variables** — counters, sine/sawtooth/triangle waves, random values, status cycling
+- **3 custom event types** with periodic emission
+- **3 alarm types** — ExclusiveLimit, NonExclusiveLimit, OffNormal
+- **4 historical variables** with HistoryRead support (1000ms recording interval)
+- **Structured objects** with nesting up to 10 levels deep
+- **2 extension objects** with binary-encoded ExtensionObject values
+- **50 access control variables** covering every combination of type and access level
+- **4 OPC UA Views** for filtered browsing
+
+## Fork It
+
+This suite covers the most common OPC UA testing scenarios out of the box, but every industrial environment is different. Need to simulate a SCADA system with hundreds of registers? An HVAC controller with multi-zone temperature loops? A fleet of PLCs on a factory floor? A smart energy meter with real-time power readings?
+
+**Fork this repository** and build exactly the OPC UA environment you need.
+
+The codebase was designed from the ground up to be extended. Each feature — methods, events, alarms, historical data, structures — lives in its own independent builder class under `src/TestServer/AddressSpace/`. You can modify any of them, remove the ones you don't need, or add entirely new builders without touching the rest. Adding a new variable is a few lines of C#. Adding a whole new address space section is a single class and two lines of wiring.
+
+The **[Customization Guide](docs/customization.md)** walks you through everything step by step:
+
+- Adding variables, methods, events, alarms, and historical nodes
+- Creating new address space builders from scratch
+- Adding new server instances with custom configurations
+- Complete simulation examples (PLC, HVAC, energy meter, device network)
+
+If you build something useful on top of this, consider opening a PR or sharing your fork — the OPC UA community benefits from better testing tools.
+
+## Already Enough for You?
+
+If the default suite already covers what you need, you're good to go. Jump straight to the **[Quick Start](#quick-start)** below, check the full **[Documentation](docs/README.md)** for every node, method, and alarm available, or head to the **[CI Integration Guide](docs/ci-integration.md)** to plug it into your pipeline in one step.
 
 ## Quick Start
 
@@ -8,18 +79,15 @@ OPC UA test server infrastructure based on the [OPC Foundation UA-.NETStandard](
 docker compose up -d
 ```
 
-This starts 8 OPC UA servers covering all security configurations:
+That's it. Eight servers are now running on ports 4840-4847 with auto-generated certificates.
 
-| Port | Server | Security Policy | Auth | Use Case |
-|------|--------|----------------|------|----------|
-| 4840 | No Security | None | Anonymous | Basic connectivity |
-| 4841 | Username/Password | Basic256Sha256 + SignAndEncrypt | User/Pass | Credential auth |
-| 4842 | Certificate | Basic256Sha256, Aes128, Aes256 + Sign/SignAndEncrypt | X.509 | Cert auth |
-| 4843 | All Security | All 6 policies + All 3 modes | All | Full security matrix |
-| 4844 | Discovery | None, Basic256Sha256 | Anonymous | FindServers |
-| 4845 | Auto-Accept | Basic256Sha256 + SignAndEncrypt | User + Cert (auto-trust) | Auto cert acceptance |
-| 4846 | Sign Only | Basic256Sha256 + Sign | Anonymous + User | Signing without encryption |
-| 4847 | Legacy | Basic128Rsa15, Basic256 + Sign/SignAndEncrypt | Anonymous + User | Deprecated policies |
+```bash
+# Connect to the simplest server
+# Endpoint: opc.tcp://localhost:4840/UA/TestServer
+
+# Stop everything
+docker compose down
+```
 
 ## Endpoints
 
@@ -34,15 +102,6 @@ opc.tcp://localhost:4846/UA/TestServer   # Sign Only
 opc.tcp://localhost:4847/UA/TestServer   # Legacy
 ```
 
-## User Accounts
-
-| Username | Password | Role |
-|----------|----------|------|
-| admin | admin123 | admin |
-| operator | operator123 | operator |
-| viewer | viewer123 | viewer |
-| test | test | admin |
-
 ## Certificates
 
 Certificates are auto-generated on first startup in `certs/`:
@@ -53,83 +112,96 @@ Certificates are auto-generated on first startup in `certs/`:
 - `certs/self-signed/` - Untrusted self-signed (for rejection testing)
 - `certs/expired/` - Expired certificate (for expiration testing)
 
-## Address Space (~300 nodes)
+Each server instance also auto-generates its own application certificate via `CheckApplicationInstanceCertificates()` on startup. The pre-generated certificates in `certs/` are used for **client authentication** and **trust store** configuration.
 
-All servers share the same rich address space under `TestServer/`:
+To regenerate all certificates:
 
-### DataTypes (`TestServer/DataTypes/`)
-- **Scalar/** - 21 read/write scalar types (Boolean, SByte, Byte, Int16..., LocalizedText)
-- **ReadOnly/** - 21 read-only scalar types
-- **Array/** - 20 read/write arrays, 6 read-only arrays, 14 empty arrays
-- **MultiDimensional/** - 2D matrices (Double, Int32) and 3D cube (Byte)
-- **WithRange/** - 3 analog items with EURange/InstrumentRange metadata
+```bash
+rm -rf certs/ca certs/server certs/client certs/trusted certs/self-signed certs/expired certs/pki
+docker compose down && docker compose up -d
+```
 
-### Methods (`TestServer/Methods/`)
-- **Add**, **Multiply** - Arithmetic
-- **Concatenate**, **Reverse** - String operations
-- **GetServerTime** - No-input method
-- **Echo** - Variant echo
-- **GenerateEvent** - Trigger server events
-- **LongRunning** - Async/timeout testing
-- **Failing** - Always fails (error handling)
-- **ArraySum** - Array input
-- **MatrixTranspose** - Matrix operations
-- **MultiOutput** - Multiple return values
+## User Accounts
 
-### Dynamic (`TestServer/Dynamic/`)
-13 time-varying read-only variables: Counter (1s), FastCounter (100ms), SlowCounter (10s), Random, SineWave, SawTooth, TriangleWave, Square, Timestamp, RandomString, StatusVariable, NullableDouble, RandomInt
+| Username | Password | Role |
+|----------|----------|------|
+| admin | admin123 | admin |
+| operator | operator123 | operator |
+| viewer | viewer123 | viewer |
+| test | test | admin |
 
-### Events & Alarms (`TestServer/Events/`, `TestServer/Alarms/`)
-- **EventEmitter** - emits SimpleEvent (2s), ComplexEvent (5s), SystemStatusEvent (10s)
-- **HighTemperatureAlarm** - ExclusiveLimit (High >80, HighHigh >95, Low <20, LowLow <5)
-- **LevelAlarm** - NonExclusiveLimit
-- **OffNormalAlarm** - Boolean off-normal condition
-- **AlarmSourceValue** / **OffNormalSource** - writable alarm trigger variables
+## Use in CI/CD (GitHub Actions)
 
-### Historical (`TestServer/Historical/`)
-4 variables with HistoryRead support: HistoricalTemperature, HistoricalPressure, HistoricalCounter, HistoricalBoolean (up to 10,000 values, 100ms recording)
-
-### Structures (`TestServer/Structures/`)
-- **TestPoint** (X, Y, Z), **TestRange** (Min, Max, Value), **TestPerson** (Name, Age, Active)
-- **TestNested** - nested object with Point sub-object
-- **PointCollection** - 5 point objects
-- **DeepNesting** - 10 levels deep (Level_1 through Level_10)
-
-### Extension Objects (`TestServer/ExtensionObjects/`)
-Custom DataTypes: TestPointXYZ, TestRangeStruct with structured variable instances
-
-### Access Control (`TestServer/AccessControl/`)
-- **AccessLevels/** - CurrentRead, CurrentWrite, ReadWrite, HistoryRead, FullAccess
-- **AdminOnly/** - 4 admin-restricted variables
-- **OperatorLevel/** - 4 operator-level variables
-- **ViewerLevel/** - 5 read-only viewer variables
-- **AllCombinations/** - 32 variables (8 types x 4 access patterns: RO, RW, WO, HR)
-
-### Views
-4 OPC UA views: OperatorView, EngineeringView, HistoricalView, DataView
-
-## CI Integration
+This repository is also a **reusable GitHub Action**. Add a single step to your workflow and all test servers are ready:
 
 ```yaml
 steps:
   - uses: actions/checkout@v4
 
-  - name: Start OPC UA Test Servers
-    run: docker compose -f docker-compose.yml -f docker-compose.ci.yml up -d --wait
+  - uses: php-opcua/uanetstandard-test-suite@v1.0.0
 
-  - name: Run client tests
-    run: your-test-command
-    env:
-      OPCUA_CERTS_DIR: ./certs
-
-  - name: Stop servers
-    if: always()
-    run: docker compose down
+  - run: dotnet test  # or cargo test, npm test, pytest, etc.
 ```
+
+You can select which servers to start, set timeouts, and access the generated certificates:
+
+```yaml
+- id: opcua
+  uses: php-opcua/uanetstandard-test-suite@v1.0.0
+  with:
+    servers: 'no-security,userpass,certificate'
+    wait-timeout: '90'
+
+- run: dotnet test
+  env:
+    OPCUA_CERTS_DIR: ${{ steps.opcua.outputs.certs-dir }}
+```
+
+For real-world usage examples, see the CI workflows in [opcua-client](https://github.com/php-opcua/opcua-client), [opcua-session-manager](https://github.com/php-opcua/opcua-session-manager), and [laravel-opcua](https://github.com/php-opcua/laravel-opcua).
+
+For the full integration guide with all options, certificate usage, version pinning, and examples for other CI systems (GitLab, Jenkins), see **[docs/ci-integration.md](docs/ci-integration.md)**.
+
+## Documentation
+
+Detailed documentation is available in the [`docs/`](docs/) folder:
+
+| Document | Description |
+|---|---|
+| [Setup & Installation](docs/setup.md) | Docker setup, environment variables, certificate regeneration |
+| [Server Instances](docs/servers.md) | The 8 servers explained: when and why to use each one |
+| [Authentication & Roles](docs/authentication.md) | Users, passwords, roles, and permissions matrix |
+| [Security & Certificates](docs/security.md) | Policies, modes, certificate files, trust chain |
+| [Address Space Overview](docs/address-space.md) | Top-level structure and navigation |
+| [Data Types](docs/data-types.md) | All scalar types, arrays, matrices, and analog items |
+| [Methods](docs/methods.md) | 12 methods with full signatures and testing checklist |
+| [Dynamic Variables](docs/dynamic-variables.md) | Time-varying variables and subscription testing |
+| [Events & Alarms](docs/events-and-alarms.md) | Custom event types, periodic events, alarm conditions |
+| [Historical Data](docs/historical-data.md) | HistoryRead operations and historical variables |
+| [Structures](docs/structures.md) | Nested objects, collections, deep nesting |
+| [Extension Objects](docs/extension-objects.md) | Binary-encoded custom structured types (PointValue, RangeValue) |
+| [Access Control](docs/access-control.md) | Access levels, role-based folders, type/access combinations |
+| [Views](docs/views.md) | 4 OPC UA views for filtered browsing |
+| [Testing Guide](docs/testing-guide.md) | Step-by-step test scenarios for every feature |
+| [CI Integration](docs/ci-integration.md) | GitHub Actions, GitLab CI, Docker Compose usage |
+| [Customization](docs/customization.md) | How to fork and build your own OPC UA simulations |
+| [AI Reference](docs/AI_REFERENCE.md) | Single-file machine-readable reference for AI tools |
 
 ## Technology
 
-- **Runtime**: .NET 8.0 (Alpine)
-- **OPC UA Stack**: [OPCFoundation.NetStandard.Opc.Ua.Server](https://www.nuget.org/packages/OPCFoundation.NetStandard.Opc.Ua.Server/) 1.5.x
-- **Configuration**: Environment variables
-- **Certificates**: OpenSSL auto-generation
+- **Runtime:** .NET 8.0 (Alpine)
+- **OPC UA Stack:** [OPCFoundation.NetStandard.Opc.Ua.Server](https://www.nuget.org/packages/OPCFoundation.NetStandard.Opc.Ua.Server/) 1.5.x
+- **Configuration:** Environment variables
+- **Certificates:** OpenSSL auto-generation + server self-signed via `CheckApplicationInstanceCertificates()`
+- **Docker image:** `ghcr.io/php-opcua/uanetstandard-test-suite`
+
+## Support
+
+For bug reports, feature requests, or questions, please open an issue on [GitHub Issues](https://github.com/php-opcua/uanetstandard-test-suite/issues).
+
+## AI Disclosure
+
+This project was built in part with the assistance of **Claude** (Anthropic). The AI contributed to code generation, documentation writing, and architecture decisions. All outputs were reviewed and validated by the author. The [AI Reference](docs/AI_REFERENCE.md) document was specifically designed to be consumed by AI coding assistants working with this project.
+
+## License
+
+This project is licensed under the [MIT License](LICENSE).

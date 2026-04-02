@@ -56,7 +56,7 @@ public class StructuresBuilder
     private void BuildTestNested(FolderState parent, string basePath)
     {
         var obj = CreateObject(parent, $"{basePath}/TestNested", "TestNested");
-        _mgr.CreateVariable<string>(obj, $"{basePath}/TestNested/Label", "Label", DataTypeIds.String, ValueRanks.Scalar, "Nested Object");
+        _mgr.CreateVariable<string>(obj, $"{basePath}/TestNested/Label", "Label", DataTypeIds.String, ValueRanks.Scalar, "origin");
         _mgr.CreateVariable<DateTime>(obj, $"{basePath}/TestNested/Timestamp", "Timestamp", DataTypeIds.DateTime, ValueRanks.Scalar, DateTime.UtcNow);
 
         var point = CreateObject(obj, $"{basePath}/TestNested/Point", "Point");
