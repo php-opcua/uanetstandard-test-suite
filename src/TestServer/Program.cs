@@ -40,6 +40,8 @@ public static class Program
             SetupPkiDirectories(config);
             var appConfig = await CreateApplicationConfiguration(config);
             application.ApplicationConfiguration = appConfig;
+
+            RegisterEccCertificateTypes(config, appConfig);
             await application.CheckApplicationInstanceCertificates(false);
 
             var server = new TestServerApp(config);
@@ -122,6 +124,39 @@ public static class Program
         File.Copy(source, destFile, true);
     }
 
+    private static readonly Dictionary<string, NodeId> EccPolicyToCertificateType = new()
+    {
+        ["ECC_nistP256"] = ObjectTypeIds.EccNistP256ApplicationCertificateType,
+        ["ECC_nistP384"] = ObjectTypeIds.EccNistP384ApplicationCertificateType,
+        ["ECC_brainpoolP256r1"] = ObjectTypeIds.EccBrainpoolP256r1ApplicationCertificateType,
+        ["ECC_brainpoolP384r1"] = ObjectTypeIds.EccBrainpoolP384r1ApplicationCertificateType,
+    };
+
+    private static void RegisterEccCertificateTypes(ServerConfig config, ApplicationConfiguration appConfig)
+    {
+        var addedTypes = new HashSet<NodeId>();
+
+        foreach (var policy in config.SecurityPolicies)
+        {
+            if (!EccPolicyToCertificateType.TryGetValue(policy, out var certType))
+                continue;
+
+            if (!addedTypes.Add(certType))
+                continue;
+
+            var certId = new CertificateIdentifier
+            {
+                StoreType = CertificateStoreType.Directory,
+                StorePath = "/tmp/pki/own",
+                SubjectName = config.ServerName,
+                CertificateType = certType,
+            };
+
+            appConfig.SecurityConfiguration.ApplicationCertificates.Add(certId);
+            Console.WriteLine($"Registered ECC certificate type for policy {policy}");
+        }
+    }
+
     private static async Task<ApplicationConfiguration> CreateApplicationConfiguration(ServerConfig config)
     {
         var certFile = config.CertificateFile;
@@ -143,6 +178,12 @@ public static class Program
                     "Basic256Sha256" => SecurityPolicies.Basic256Sha256,
                     "Aes128_Sha256_RsaOaep" => SecurityPolicies.Aes128_Sha256_RsaOaep,
                     "Aes256_Sha256_RsaPss" => SecurityPolicies.Aes256_Sha256_RsaPss,
+                    "ECC_nistP256" => SecurityPolicies.ECC_nistP256,
+                    "ECC_nistP384" => SecurityPolicies.ECC_nistP384,
+                    "ECC_brainpoolP256r1" => SecurityPolicies.ECC_brainpoolP256r1,
+                    "ECC_brainpoolP384r1" => SecurityPolicies.ECC_brainpoolP384r1,
+                    "ECC_curve25519" => SecurityPolicies.ECC_curve25519,
+                    "ECC_curve448" => SecurityPolicies.ECC_curve448,
                     _ => SecurityPolicies.None
                 };
 

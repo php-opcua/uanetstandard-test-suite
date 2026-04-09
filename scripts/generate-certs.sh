@@ -84,6 +84,8 @@ DNS.6 = opcua-discovery
 DNS.7 = opcua-auto-accept
 DNS.8 = opcua-sign-only
 DNS.9 = opcua-legacy
+DNS.10 = opcua-ecc-nist
+DNS.11 = opcua-ecc-brainpool
 IP.1 = 127.0.0.1
 IP.2 = 0.0.0.0
 EXTEOF

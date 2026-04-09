@@ -201,3 +201,52 @@ services:
       certs-generator:
         condition: service_completed_successfully
     restart: unless-stopped
+
+  # === Server 9: ECC NIST (Port 4848) ===
+  # ECC security with NIST P-256 and P-384 curves
+  opcua-ecc-nist:
+    build: .
+    ports:
+      - "4848:4848"
+    volumes:
+      - ./certs:/app/certs
+      - ./config:/app/config:ro
+    environment:
+      OPCUA_PORT: "4848"
+      OPCUA_SERVER_NAME: "EccNistServer"
+      OPCUA_SECURITY_POLICIES: "ECC_nistP256,ECC_nistP384"
+      OPCUA_SECURITY_MODES: "Sign,SignAndEncrypt"
+      OPCUA_ALLOW_ANONYMOUS: "true"
+      OPCUA_AUTH_USERS: "true"
+      OPCUA_AUTH_CERTIFICATE: "true"
+      OPCUA_AUTO_ACCEPT_CERTS: "true"
+
+    depends_on:
+      certs-generator:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  # === Server 10: ECC Brainpool (Port 4849) ===
+
+  # ECC security with Brainpool P-256r1 and P-384r1 curves (European standard)
+  opcua-ecc-brainpool:
+    build: .
+    ports:
+      - "4849:4849"
+    volumes:
+      - ./certs:/app/certs
+      - ./config:/app/config:ro
+    environment:
+      OPCUA_PORT: "4849"
+      OPCUA_SERVER_NAME: "EccBrainpoolServer"
+      OPCUA_SECURITY_POLICIES: "ECC_brainpoolP256r1,ECC_brainpoolP384r1"
+      OPCUA_SECURITY_MODES: "Sign,SignAndEncrypt"
+      OPCUA_ALLOW_ANONYMOUS: "true"
+      OPCUA_AUTH_USERS: "true"
+      OPCUA_AUTH_CERTIFICATE: "true"
+      OPCUA_AUTO_ACCEPT_CERTS: "true"
+
+    depends_on:
+      certs-generator:
+        condition: service_completed_successfully
+    restart: unless-stopped

@@ -27,3 +27,9 @@ services:
 
   opcua-legacy:
     restart: "no"
+
+  opcua-ecc-nist:
+    restart: "no"
+
+  opcua-ecc-brainpool:
+    restart: "no"

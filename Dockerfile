@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/dotnet/sdk:8.0-alpine AS build
+FROM mcr.microsoft.com/dotnet/sdk:10.0-preview-alpine AS build
 WORKDIR /src
 
 COPY src/TestServer/TestServer.csproj ./TestServer/
@@ -7,7 +7,7 @@ RUN dotnet restore TestServer/TestServer.csproj
 COPY src/TestServer/ ./TestServer/
 RUN dotnet publish TestServer/TestServer.csproj -c Release -o /app --no-restore
 
-FROM mcr.microsoft.com/dotnet/aspnet:8.0-alpine AS runtime
+FROM mcr.microsoft.com/dotnet/aspnet:10.0-preview-alpine AS runtime
 RUN apk add --no-cache openssl icu-libs icu-data-full
 
 WORKDIR /app
