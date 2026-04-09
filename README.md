@@ -12,13 +12,13 @@
   <a href="https://github.com/php-opcua/uanetstandard-test-suite/releases"><img src="https://img.shields.io/github/v/release/php-opcua/uanetstandard-test-suite?label=version&color=6366F1" alt="Version"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="License: MIT"></a>
   <a href="https://github.com/php-opcua/uanetstandard-test-suite/pkgs/container/uanetstandard-test-suite"><img src="https://img.shields.io/badge/docker-ghcr.io-blue?logo=docker&logoColor=white" alt="Docker"></a>
-  <a href="https://dotnet.microsoft.com/"><img src="https://img.shields.io/badge/.NET-8.0-512BD4?logo=dotnet&logoColor=white" alt=".NET 8.0"></a>
+  <a href="https://dotnet.microsoft.com/"><img src="https://img.shields.io/badge/.NET-10.0-512BD4?logo=dotnet&logoColor=white" alt=".NET 9.0"></a>
   <a href="https://github.com/OPCFoundation/UA-.NETStandard"><img src="https://img.shields.io/badge/OPC_UA-UA--NETStandard-4F46E5" alt="UA-.NETStandard"></a>
 </p>
 
 ---
 
-A comprehensive, ready-to-use OPC UA suite built specifically for **integration testing of OPC UA client libraries**. Built on the [OPC Foundation UA-.NETStandard](https://github.com/OPCFoundation/UA-.NETStandard) library (.NET 8.0), it provides 8 pre-configured server instances covering every major security policy, authentication method, and communication mode defined by the OPC UA specification.
+A comprehensive, ready-to-use OPC UA suite built specifically for **integration testing of OPC UA client libraries**. Built on the [OPC Foundation UA-.NETStandard](https://github.com/OPCFoundation/UA-.NETStandard) library (.NET 8.0), it provides 10 pre-configured server instances covering every major security policy (RSA and ECC), authentication method, and communication mode defined by the OPC UA specification.
 
 Whether you're building an OPC UA client in Rust, C#, Python, Go, Java, PHP, or any other language, this suite gives you a realistic test environment with ~300 nodes, 12 callable methods, dynamic variables, events, alarms, historical data, structured objects, and custom extension objects — all running with a single `docker compose up`.
 
@@ -31,11 +31,13 @@ Whether you're building an OPC UA client in Rust, C#, Python, Go, Java, PHP, or 
 | 4840 | No Security | Basic connectivity, anonymous access |
 | 4841 | Username/Password | Encrypted channel + credential authentication |
 | 4842 | Certificate Auth | X.509 certificate-based authentication |
-| 4843 | All Security | Every policy, every mode, every auth method |
+| 4843 | All Security | Every RSA policy, every mode, every auth method |
 | 4844 | Discovery | OPC UA Discovery Server (FindServers) |
 | 4845 | Auto-Accept | Encrypted with auto-trust for any client cert |
 | 4846 | Sign Only | Message signing without encryption |
 | 4847 | Legacy Security | Deprecated policies (Basic128Rsa15, Basic256) |
+| 4848 | ECC NIST | ECC_nistP256, ECC_nistP384 |
+| 4849 | ECC Brainpool | ECC_brainpoolP256r1, ECC_brainpoolP384r1 |
 
 All servers share the same rich address space:
 
@@ -79,7 +81,7 @@ If the default suite already covers what you need, you're good to go. Jump strai
 docker compose up -d
 ```
 
-That's it. Eight servers are now running on ports 4840-4847 with auto-generated certificates.
+That's it. Ten servers are now running on ports 4840-4849 with auto-generated certificates (RSA + ECC).
 
 ```bash
 # Connect to the simplest server
@@ -100,6 +102,8 @@ opc.tcp://localhost:4844                 # Discovery
 opc.tcp://localhost:4845/UA/TestServer   # Auto-Accept
 opc.tcp://localhost:4846/UA/TestServer   # Sign Only
 opc.tcp://localhost:4847/UA/TestServer   # Legacy
+opc.tcp://localhost:4848/UA/TestServer   # ECC NIST (P-256, P-384)
+opc.tcp://localhost:4849/UA/TestServer   # ECC Brainpool (P-256r1, P-384r1)
 ```
 
 ## Certificates
@@ -111,8 +115,7 @@ Certificates are auto-generated on first startup in `certs/`:
 - `certs/client/` - Client certificate (PEM, DER, PFX)
 - `certs/self-signed/` - Untrusted self-signed (for rejection testing)
 - `certs/expired/` - Expired certificate (for expiration testing)
-
-Each server instance also auto-generates its own application certificate via `CheckApplicationInstanceCertificates()` on startup. The pre-generated certificates in `certs/` are used for **client authentication** and **trust store** configuration.
+All server instances (RSA and ECC) auto-generate their own application certificates via `CheckApplicationInstanceCertificates()` on startup. The pre-generated certificates in `certs/` are used for **client authentication** and **trust store** configuration.
 
 To regenerate all certificates:
 
@@ -168,7 +171,7 @@ Detailed documentation is available in the [`docs/`](docs/) folder:
 | Document | Description |
 |---|---|
 | [Setup & Installation](docs/setup.md) | Docker setup, environment variables, certificate regeneration |
-| [Server Instances](docs/servers.md) | The 8 servers explained: when and why to use each one |
+| [Server Instances](docs/servers.md) | The 10 servers explained: when and why to use each one |
 | [Authentication & Roles](docs/authentication.md) | Users, passwords, roles, and permissions matrix |
 | [Security & Certificates](docs/security.md) | Policies, modes, certificate files, trust chain |
 | [Address Space Overview](docs/address-space.md) | Top-level structure and navigation |
@@ -188,7 +191,7 @@ Detailed documentation is available in the [`docs/`](docs/) folder:
 
 ## Technology
 
-- **Runtime:** .NET 8.0 (Alpine)
+- **Runtime:** .NET 10.0 (Alpine)
 - **OPC UA Stack:** [OPCFoundation.NetStandard.Opc.Ua.Server](https://www.nuget.org/packages/OPCFoundation.NetStandard.Opc.Ua.Server/) 1.5.x
 - **Configuration:** Environment variables
 - **Certificates:** OpenSSL auto-generation + server self-signed via `CheckApplicationInstanceCertificates()`

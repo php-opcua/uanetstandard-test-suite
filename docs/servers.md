@@ -1,6 +1,6 @@
 # Server Instances
 
-The suite runs 8 independent OPC UA server instances, each configured for a specific testing scenario. All servers share the same codebase and expose the same address space — only security, authentication, and network settings differ.
+The suite runs 10 independent OPC UA server instances, each configured for a specific testing scenario. All servers share the same codebase and expose the same address space — only security, authentication, and network settings differ.
 
 ## Overview
 
@@ -9,11 +9,13 @@ The suite runs 8 independent OPC UA server instances, each configured for a spec
 | 1 | `opcua-no-security` | 4840 | None | None | Anonymous only |
 | 2 | `opcua-userpass` | 4841 | Basic256Sha256 | SignAndEncrypt | Username/Password |
 | 3 | `opcua-certificate` | 4842 | Basic256Sha256, Aes128, Aes256 | Sign, SignAndEncrypt | X.509 Certificate |
-| 4 | `opcua-all-security` | 4843 | All 6 policies | All 3 modes | Anonymous + Username + Certificate |
+| 4 | `opcua-all-security` | 4843 | All 6 RSA policies | All 3 modes | Anonymous + Username + Certificate |
 | 5 | `opcua-discovery` | 4844 | None, Basic256Sha256 | None, SignAndEncrypt | Anonymous |
 | 6 | `opcua-auto-accept` | 4845 | Basic256Sha256 | SignAndEncrypt | Anonymous + Username + Certificate |
 | 7 | `opcua-sign-only` | 4846 | Basic256Sha256 | Sign | Anonymous + Username |
 | 8 | `opcua-legacy` | 4847 | Basic128Rsa15, Basic256 | Sign, SignAndEncrypt | Anonymous + Username |
+| 9 | `opcua-ecc-nist` | 4848 | ECC_nistP256, ECC_nistP384 | Sign, SignAndEncrypt | Anonymous + Username + Certificate |
+| 10 | `opcua-ecc-brainpool` | 4849 | ECC_brainpoolP256r1, ECC_brainpoolP384r1 | Sign, SignAndEncrypt | Anonymous + Username + Certificate |
 
 ---
 
@@ -140,3 +142,43 @@ Uses deprecated security policies: `Basic128Rsa15` and `Basic256`. These are con
 - Deprecated policy support
 - Security policy upgrade/migration scenarios
 - Warning/logging when using deprecated policies
+
+---
+
+## 9. ECC NIST (`opcua-ecc-nist` -- port 4848)
+
+**Endpoint:** `opc.tcp://localhost:4848/UA/TestServer`
+
+ECC security using NIST curves. Uses pre-generated ECC P-256 server certificate.
+
+**Policies:** ECC_nistP256, ECC_nistP384
+**Modes:** Sign, SignAndEncrypt
+**Auth:** Anonymous, Username/Password, X.509 Certificate
+
+**Use for testing:**
+- ECC-based security with NIST standard curves
+- ECDSA signatures (SHA-256 / SHA-384)
+- Ephemeral ECDH key agreement
+- ECC certificate validation
+- Modern security (~128-bit / ~192-bit equivalent)
+
+**ECC Client certificates:** Available at `certs/ecc-nist/client/`
+
+---
+
+## 10. ECC Brainpool (`opcua-ecc-brainpool` -- port 4849)
+
+**Endpoint:** `opc.tcp://localhost:4849/UA/TestServer`
+
+ECC security using Brainpool curves (European BSI standard). Uses pre-generated ECC brainpoolP256r1 server certificate.
+
+**Policies:** ECC_brainpoolP256r1, ECC_brainpoolP384r1
+**Modes:** Sign, SignAndEncrypt
+**Auth:** Anonymous, Username/Password, X.509 Certificate
+
+**Use for testing:**
+- ECC-based security with Brainpool curves
+- European regulatory compliance (BSI TR-03116)
+- Alternative to NIST curves with verifiably random parameters
+- ECC certificate validation with non-NIST curves
+

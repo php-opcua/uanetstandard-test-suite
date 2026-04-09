@@ -28,3 +28,9 @@ Thumbs.db
 
 # Docker
 docker-compose.override.yml
+
+certs/ecc-brainpool/
+
+certs/ecc-curve/
+
+certs/ecc-nist/

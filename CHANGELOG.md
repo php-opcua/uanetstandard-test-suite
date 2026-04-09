@@ -1,5 +1,17 @@
 # Changelog
 
+## v1.1.0 — 2026-04-x
+
+### ECC Security Policies
+
+- **2 new server instances** for Elliptic Curve Cryptography (ECC) security policies (ports 4848-4849).
+- **Server 9 — ECC NIST** (`opcua-ecc-nist`, port 4848): ECC_nistP256 and ECC_nistP384 policies with NIST P-256/P-384 curves.
+- **Server 10 — ECC Brainpool** (`opcua-ecc-brainpool`, port 4849): ECC_brainpoolP256r1 and ECC_brainpoolP384r1 policies (European BSI standard).
+- **ECC certificates auto-generated** by UA-.NETStandard SDK via `ApplicationCertificates` collection with `CertificateType` mapping.
+- Updated GitHub Actions composite action (`action.yml`) with `ecc-nist`, `ecc-brainpool` server options.
+- Updated CI compose overrides (`docker-compose.ci.yml`) for the 2 new services.
+- **Upgraded to .NET 10.0** runtime and SDK.
+
 ## v1.0.0 — 2026-04-02
 
 ### Initial Release

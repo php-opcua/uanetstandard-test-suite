@@ -2,3 +2,5 @@
 *.md
 certs
 .env
+**/obj
+**/bin
