@@ -12,13 +12,13 @@
   <a href="https://github.com/php-opcua/uanetstandard-test-suite/releases"><img src="https://img.shields.io/github/v/release/php-opcua/uanetstandard-test-suite?label=version&color=6366F1" alt="Version"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="License: MIT"></a>
   <a href="https://github.com/php-opcua/uanetstandard-test-suite/pkgs/container/uanetstandard-test-suite"><img src="https://img.shields.io/badge/docker-ghcr.io-blue?logo=docker&logoColor=white" alt="Docker"></a>
-  <a href="https://dotnet.microsoft.com/"><img src="https://img.shields.io/badge/.NET-10.0-512BD4?logo=dotnet&logoColor=white" alt=".NET 9.0"></a>
+  <a href="https://dotnet.microsoft.com/"><img src="https://img.shields.io/badge/.NET-10.0-512BD4?logo=dotnet&logoColor=white" alt=".NET 10.0"></a>
   <a href="https://github.com/OPCFoundation/UA-.NETStandard"><img src="https://img.shields.io/badge/OPC_UA-UA--NETStandard-4F46E5" alt="UA-.NETStandard"></a>
 </p>
 
 ---
 
-A comprehensive, ready-to-use OPC UA suite built specifically for **integration testing of OPC UA client libraries**. Built on the [OPC Foundation UA-.NETStandard](https://github.com/OPCFoundation/UA-.NETStandard) library (.NET 8.0), it provides 10 pre-configured server instances covering every major security policy (RSA and ECC), authentication method, and communication mode defined by the OPC UA specification.
+A comprehensive, ready-to-use OPC UA suite built specifically for **integration testing of OPC UA client libraries**. Built on the [OPC Foundation UA-.NETStandard](https://github.com/OPCFoundation/UA-.NETStandard) library (.NET 10.0), it provides 10 pre-configured server instances covering every major security policy (RSA and ECC), authentication method, and communication mode defined by the OPC UA specification.
 
 Whether you're building an OPC UA client in Rust, C#, Python, Go, Java, PHP, or any other language, this suite gives you a realistic test environment with ~300 nodes, 12 callable methods, dynamic variables, events, alarms, historical data, structured objects, and custom extension objects — all running with a single `docker compose up`.
 
@@ -141,7 +141,7 @@ This repository is also a **reusable GitHub Action**. Add a single step to your 
 steps:
   - uses: actions/checkout@v4
 
-  - uses: php-opcua/uanetstandard-test-suite@v1.0.0
+  - uses: php-opcua/uanetstandard-test-suite@v1.1.0
 
   - run: dotnet test  # or cargo test, npm test, pytest, etc.
 ```
@@ -150,7 +150,7 @@ You can select which servers to start, set timeouts, and access the generated ce
 
 ```yaml
 - id: opcua
-  uses: php-opcua/uanetstandard-test-suite@v1.0.0
+  uses: php-opcua/uanetstandard-test-suite@v1.1.0
   with:
     servers: 'no-security,userpass,certificate'
     wait-timeout: '90'

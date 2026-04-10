@@ -430,5 +430,5 @@ public FolderState BuildEnergyMeter(FolderState rootFolder, ServerSystemContext 
 - **Keep builders independent.** Each builder should only use the namespace index and parent folder parameters. Don't reference other builders' variables directly.
 - **Always dispose timers.** Every `System.Threading.Timer` must be tracked and disposed in the `Stop()` method, otherwise the server won't shut down cleanly.
 - **Use `Console.WriteLine` with tags.** Follow the existing pattern: `Console.WriteLine("[MyModule] Something happened")` for easy log filtering.
-- **Test locally first.** Run `docker compose build && docker compose up opcua-no-security` to test with a single server before starting all 8.
+- **Test locally first.** Run `docker compose build && docker compose up opcua-no-security` to test with a single server before starting all 10.
 - **Check UA-.NETStandard docs.** The [OPC Foundation UA-.NETStandard repository](https://github.com/OPCFoundation/UA-.NETStandard) contains samples and API documentation for all available node types, data types, and advanced features.

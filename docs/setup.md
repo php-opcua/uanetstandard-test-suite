@@ -3,12 +3,12 @@
 ## Prerequisites
 
 - Docker and Docker Compose (v2+)
-- Ports 4840-4847 available on the host
+- Ports 4840-4849 available on the host
 
 ## Starting the Servers
 
 ```bash
-# Build and start all 8 servers in detached mode
+# Build and start all 10 servers in detached mode
 docker compose up -d
 
 # First run takes longer: the certs-generator container creates
@@ -78,7 +78,7 @@ All servers run on a shared Docker network so they can communicate with each oth
 
 ## Resource Usage
 
-Each server instance is a lightweight .NET 8.0 process. The 8 servers combined typically use:
+Each server instance is a lightweight .NET 10.0 process. The 10 servers combined typically use:
 - ~300-500 MB RAM total
 - Minimal CPU (mostly idle, spikes during subscriptions)
 

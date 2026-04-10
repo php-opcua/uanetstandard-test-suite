@@ -4,7 +4,7 @@ How to use the UA-.NETStandard Test Server Suite in your project's CI/CD pipelin
 
 ## GitHub Actions (Recommended)
 
-This repository is a reusable **GitHub Composite Action**. Add one step to your workflow and all 8 OPC UA servers are ready on `localhost:4840-4847`.
+This repository is a reusable **GitHub Composite Action**. Add one step to your workflow and all 10 OPC UA servers are ready on `localhost:4840-4849`.
 
 ### Minimal Example
 
@@ -18,7 +18,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: php-opcua/uanetstandard-test-suite@v1.0.0
+      - uses: php-opcua/uanetstandard-test-suite@v1.1.0
 
       - run: cargo test  # or npm test, pytest, dotnet test, etc.
 ```
@@ -39,7 +39,7 @@ jobs:
 
       - name: Start OPC UA test servers
         id: opcua
-        uses: php-opcua/uanetstandard-test-suite@v1.0.0
+        uses: php-opcua/uanetstandard-test-suite@v1.1.0
         with:
           # Which servers to start (default: all)
           servers: 'no-security,userpass,certificate'
@@ -64,7 +64,7 @@ jobs:
 
 | Input | Default | Description |
 |---|---|---|
-| `servers` | `all` | Comma-separated list of servers to start. Options: `no-security`, `userpass`, `certificate`, `all-security`, `discovery`, `auto-accept`, `sign-only`, `legacy` |
+| `servers` | `all` | Comma-separated list of servers to start. Options: `no-security`, `userpass`, `certificate`, `all-security`, `discovery`, `auto-accept`, `sign-only`, `legacy`, `ecc-nist`, `ecc-brainpool` |
 | `wait-timeout` | `120` | Seconds to wait for all servers to be ready before failing |
 
 ### Action Outputs
@@ -79,17 +79,17 @@ Start only the servers you need to save CI time:
 
 ```yaml
 # Only no-security for basic tests
-- uses: php-opcua/uanetstandard-test-suite@v1.0.0
+- uses: php-opcua/uanetstandard-test-suite@v1.1.0
   with:
     servers: 'no-security'
 
 # Security tests only
-- uses: php-opcua/uanetstandard-test-suite@v1.0.0
+- uses: php-opcua/uanetstandard-test-suite@v1.1.0
   with:
     servers: 'userpass,certificate,all-security'
 
 # All servers (default)
-- uses: php-opcua/uanetstandard-test-suite@v1.0.0
+- uses: php-opcua/uanetstandard-test-suite@v1.1.0
 ```
 
 ### Available Servers and Ports
@@ -104,6 +104,8 @@ Start only the servers you need to save CI time:
 | `auto-accept` | 4845 | `opc.tcp://localhost:4845/UA/TestServer` |
 | `sign-only` | 4846 | `opc.tcp://localhost:4846/UA/TestServer` |
 | `legacy` | 4847 | `opc.tcp://localhost:4847/UA/TestServer` |
+| `ecc-nist` | 4848 | `opc.tcp://localhost:4848/UA/TestServer` |
+| `ecc-brainpool` | 4849 | `opc.tcp://localhost:4849/UA/TestServer` |
 
 ### Using Certificates in Tests
 
@@ -111,7 +113,7 @@ The action makes all generated certificates available on the runner filesystem v
 
 ```yaml
 - id: opcua
-  uses: php-opcua/uanetstandard-test-suite@v1.0.0
+  uses: php-opcua/uanetstandard-test-suite@v1.1.0
 
 - run: |
     # Trusted client certificate (signed by CA)
@@ -134,7 +136,7 @@ The action makes all generated certificates available on the runner filesystem v
 
 ```yaml
 # Pin to a specific release (recommended for stability)
-- uses: php-opcua/uanetstandard-test-suite@v1.0.0
+- uses: php-opcua/uanetstandard-test-suite@v1.1.0
 
 # Use latest from main branch
 - uses: php-opcua/uanetstandard-test-suite@master
@@ -158,7 +160,7 @@ docker pull "$OPCUA_SERVER_IMAGE"
 docker compose -f docker-compose.yml -f docker-compose.ci.yml up -d
 
 # Wait for servers
-for port in 4840 4841 4842 4843 4844 4845 4846 4847; do
+for port in 4840 4841 4842 4843 4844 4845 4846 4847 4848 4849; do
   while ! nc -z localhost $port 2>/dev/null; do sleep 1; done
   echo "Port $port ready"
 done
@@ -205,6 +207,6 @@ git clone https://github.com/php-opcua/uanetstandard-test-suite.git
 cd uanetstandard-test-suite
 docker compose up -d
 
-# Ports 4840-4847 are now available on localhost
+# Ports 4840-4849 are now available on localhost
 # Certificates are at ./certs/
 ```

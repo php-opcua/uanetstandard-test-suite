@@ -6,10 +6,10 @@ Single-file reference optimized for AI consumption. Contains every fact needed t
 
 - **Name:** `uanetstandard-test-suite`
 - **GitHub:** `php-opcua/uanetstandard-test-suite`
-- **Runtime:** .NET 8.0 (Alpine)
+- **Runtime:** .NET 10.0 (Alpine)
 - **OPC UA Stack:** OPCFoundation.NetStandard.Opc.Ua.Server 1.5.x
 - **Language:** C#
-- **Deployment:** Docker Compose (8 containers from 1 codebase)
+- **Deployment:** Docker Compose (10 containers from 1 codebase)
 - **Entry point:** `src/TestServer/Program.cs`
 - **Docker image:** `ghcr.io/php-opcua/uanetstandard-test-suite`
 - **ApplicationUri:** `urn:opcua:testserver:nodes`
@@ -25,6 +25,8 @@ opc.tcp://localhost:4844                 # discovery server (no /UA/TestServer)
 opc.tcp://localhost:4845/UA/TestServer   # Basic256Sha256+SignAndEncrypt, auto-accept certs
 opc.tcp://localhost:4846/UA/TestServer   # Basic256Sha256+Sign only, anonymous+username
 opc.tcp://localhost:4847/UA/TestServer   # Basic128Rsa15+Basic256, legacy deprecated
+opc.tcp://localhost:4848/UA/TestServer   # ECC_nistP256+ECC_nistP384
+opc.tcp://localhost:4849/UA/TestServer   # ECC_brainpoolP256r1+ECC_brainpoolP384r1
 ```
 
 ## Server Matrix
@@ -39,6 +41,8 @@ PORT  SERVICE               POLICIES                                          MO
 4845  opcua-auto-accept     Basic256Sha256                                    SignAndEncrypt         yes   yes   yes   yes
 4846  opcua-sign-only       Basic256Sha256                                    Sign                   yes   yes   no    yes
 4847  opcua-legacy          Basic128Rsa15,Basic256                            Sign,SignAndEncrypt    yes   yes   no    yes
+4848  opcua-ecc-nist        ECC_nistP256,ECC_nistP384                         Sign,SignAndEncrypt    yes   yes   yes   yes
+4849  opcua-ecc-brainpool   ECC_brainpoolP256r1,ECC_brainpoolP384r1           Sign,SignAndEncrypt    yes   yes   yes   yes
 ```
 
 ## Credentials
@@ -542,7 +546,7 @@ Read >5 nodes on no-security server         BadTooManyOperations (or similar)
 ## Docker Commands
 
 ```bash
-docker compose up -d          # start all 8 servers
+docker compose up -d          # start all 10 servers
 docker compose down           # stop all
 docker compose build          # rebuild after code changes
 docker compose logs -f <svc>  # tail logs for one service

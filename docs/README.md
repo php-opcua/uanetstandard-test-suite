@@ -1,11 +1,11 @@
 # UA-.NETStandard Test Server Suite — Documentation
 
-A comprehensive OPC UA server suite designed for testing OPC UA client libraries. Built on `OPCFoundation.NetStandard.Opc.Ua.Server` 1.5.x (.NET 8.0), deployed via Docker Compose as 8 independent server instances covering every major security and authentication scenario.
+A comprehensive OPC UA server suite designed for testing OPC UA client libraries. Built on `OPCFoundation.NetStandard.Opc.Ua.Server` 1.5.x (.NET 10.0), deployed via Docker Compose as 10 independent server instances covering every major security and authentication scenario.
 
 ## Table of Contents
 
 1. [Setup & Installation](setup.md) — Docker setup, build, run, and teardown
-2. [Server Instances](servers.md) — The 8 server configurations and when to use each
+2. [Server Instances](servers.md) — The 10 server configurations and when to use each
 3. [Authentication & Roles](authentication.md) — Users, passwords, roles, permissions, and certificate-based auth
 4. [Security & Certificates](security.md) — Security policies, modes, certificate structure, and trust chain
 5. [Address Space Overview](address-space.md) — Top-level structure and navigation
@@ -26,7 +26,7 @@ A comprehensive OPC UA server suite designed for testing OPC UA client libraries
 ## Quick Start
 
 ```bash
-# Start all 8 servers
+# Start all 10 servers
 docker compose up -d
 
 # Verify they're running
@@ -41,7 +41,7 @@ docker compose down
 
 ## Architecture
 
-A single codebase (`src/TestServer/`) is instantiated 8 times via `docker-compose.yml`, each with different environment variables controlling security, authentication, and features. All servers expose the same address space (~300 nodes).
+A single codebase (`src/TestServer/`) is instantiated 10 times via `docker-compose.yml`, each with different environment variables controlling security, authentication, and features. All servers expose the same address space (~300 nodes).
 
 ```
 Client ──► opcua-no-security    (4840)  No security, anonymous only
@@ -52,6 +52,8 @@ Client ──► opcua-no-security    (4840)  No security, anonymous only
        ──► opcua-auto-accept    (4845)  Auto-accepts any client cert
        ──► opcua-sign-only      (4846)  Sign mode only (no encryption)
        ──► opcua-legacy         (4847)  Deprecated policies (Basic128, Basic256)
+       ──► opcua-ecc-nist       (4848)  ECC NIST (P-256, P-384)
+       ──► opcua-ecc-brainpool  (4849)  ECC Brainpool (P-256r1, P-384r1)
 ```
 
 ## Node Count Summary

@@ -1,6 +1,6 @@
 # Changelog
 
-## v1.1.0 — 2026-04-x
+## v1.1.0 — 2026-04-10
 
 ### ECC Security Policies
 
