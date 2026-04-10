@@ -78,6 +78,13 @@ public static class Program
 
     private static void SetupPkiDirectories(ServerConfig config)
     {
+        // Clean stale auto-generated certificates from previous runs
+        // (prevents "certificate is invalid" errors after container stop/start)
+        if (Directory.Exists("/tmp/pki/own"))
+        {
+            Directory.Delete("/tmp/pki/own", true);
+        }
+
         // Create writable PKI directories for UA-.NETStandard cert store
         var dirs = new[]
         {
