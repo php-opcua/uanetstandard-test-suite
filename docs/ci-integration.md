@@ -64,7 +64,7 @@ jobs:
 
 | Input | Default | Description |
 |---|---|---|
-| `servers` | `all` | Comma-separated list of servers to start. Options: `no-security`, `userpass`, `certificate`, `all-security`, `discovery`, `auto-accept`, `sign-only`, `legacy`, `ecc-nist`, `ecc-brainpool` |
+| `servers` | `all` | Comma-separated list of servers to start. Options: `no-security`, `userpass`, `certificate`, `all-security`, `discovery`, `auto-accept`, `sign-only`, `legacy`, `ecc-nist`, `ecc-brainpool`, `sks`, `pubsub` |
 | `wait-timeout` | `120` | Seconds to wait for all servers to be ready before failing |
 
 ### Action Outputs
@@ -106,6 +106,8 @@ Start only the servers you need to save CI time:
 | `legacy` | 4847 | `opc.tcp://localhost:4847/UA/TestServer` |
 | `ecc-nist` | 4848 | `opc.tcp://localhost:4848/UA/TestServer` |
 | `ecc-brainpool` | 4849 | `opc.tcp://localhost:4849/UA/TestServer` |
+| `sks` | 4851 | `opc.tcp://localhost:4851/UA/TestServer` — Part 14 §8.4.2 `GetSecurityKeys` |
+| `pubsub` | 14850 (UDP, host side) | `opc.udp://127.0.0.1:14850` — UA-.NETStandard publisher unicast via `opcua-pubsub-relay` sidecar |
 
 ### Using Certificates in Tests
 
@@ -159,11 +161,12 @@ export OPCUA_SERVER_IMAGE=ghcr.io/php-opcua/uanetstandard-test-suite:latest
 docker pull "$OPCUA_SERVER_IMAGE"
 docker compose -f docker-compose.yml -f docker-compose.ci.yml up -d
 
-# Wait for servers
+# Wait for classic servers
 for port in 4840 4841 4842 4843 4844 4845 4846 4847 4848 4849; do
   while ! nc -z localhost $port 2>/dev/null; do sleep 1; done
   echo "Port $port ready"
 done
+# PubSub publisher is fire-and-forget on UDP 4850, no TCP probe needed
 
 # Certificates are available at ./certs/
 export OPCUA_CERTS_DIR=./certs

@@ -1,5 +1,5 @@
 name: 'UA-.NETStandard Test Suite'
-description: 'Start 10 pre-configured OPC UA test servers (.NET 10.0) covering all security policies (RSA + ECC) and auth methods.'
+description: 'Start 10 pre-configured OPC UA test servers (.NET 10.0) covering all security policies (RSA + ECC) and auth methods, plus an optional UDP+UADP PubSub publisher.'
 author: 'Gianfrancesco Aurecchia'
 
 branding:
@@ -8,7 +8,7 @@ branding:
 
 inputs:
   servers:
-    description: 'Comma-separated list of servers to start, or "all". Options: no-security, userpass, certificate, all-security, discovery, auto-accept, sign-only, legacy, ecc-nist, ecc-brainpool'
+    description: 'Comma-separated list of servers to start, or "all". Options: no-security, userpass, certificate, all-security, discovery, auto-accept, sign-only, legacy, ecc-nist, ecc-brainpool, sks, pubsub'
     required: false
     default: 'all'
   wait-timeout:
@@ -39,7 +39,7 @@ runs:
         if [ "$SERVERS" = "all" ]; then
           echo "compose-args=" >> "$GITHUB_OUTPUT"
         else
-          ALL_SERVICES="opcua-no-security opcua-userpass opcua-certificate opcua-all-security opcua-discovery opcua-auto-accept opcua-sign-only opcua-legacy opcua-ecc-nist opcua-ecc-brainpool"
+          ALL_SERVICES="opcua-no-security opcua-userpass opcua-certificate opcua-all-security opcua-discovery opcua-auto-accept opcua-sign-only opcua-legacy opcua-ecc-nist opcua-ecc-brainpool opcua-sks opcua-pubsub"
           WANTED=""
           IFS=',' read -ra ITEMS <<< "$SERVERS"
           for item in "${ITEMS[@]}"; do

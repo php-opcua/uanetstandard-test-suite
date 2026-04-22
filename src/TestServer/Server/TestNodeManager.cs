@@ -100,6 +100,13 @@ public class TestNodeManager : CustomNodeManager2
             accessControl.Build();
             Console.WriteLine("  [+] AccessControl address space built");
 
+            if (_config.EnableSks)
+            {
+                var sks = new SecurityKeyServiceBuilder(this, root, SystemContext, _config);
+                sks.Build();
+                Console.WriteLine("  [+] SecurityKeyService address space built");
+            }
+
             if (_config.EnableViews)
             {
                 var views = new ViewsBuilder(this, root, SystemContext);

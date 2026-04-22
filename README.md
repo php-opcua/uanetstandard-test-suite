@@ -38,8 +38,10 @@ Whether you're building an OPC UA client in Rust, C#, Python, Go, Java, PHP, or 
 | 4847 | Legacy Security | Deprecated policies (Basic128Rsa15, Basic256) |
 | 4848 | ECC NIST | ECC_nistP256, ECC_nistP384 |
 | 4849 | ECC Brainpool | ECC_brainpoolP256r1, ECC_brainpoolP384r1 |
+| 14850 (UDP) | PubSub Publisher + relay | UADP NetworkMessages over UDP — subscriber-side testing (Part 14) |
+| 4851 | Security Key Service | OPC UA Part 14 §8.4.2 `GetSecurityKeys` for PubSub group-key rotation tests |
 
-All servers share the same rich address space:
+The 10 classic client/server instances share the same rich address space:
 
 - **21 scalar data types** (Boolean through LocalizedText) in read/write and read-only variants
 - **20 array types** + 14 empty arrays + 6 read-only arrays
@@ -81,7 +83,7 @@ If the default suite already covers what you need, you're good to go. Jump strai
 docker compose up -d
 ```
 
-That's it. Ten servers are now running on ports 4840-4849 with auto-generated certificates (RSA + ECC).
+That's it. Ten client/server instances are running on ports 4840-4849 with auto-generated certificates (RSA + ECC), a Security Key Service is ready on port 4851, and a PubSub publisher + relay pair delivers UADP frames on UDP port 14850 of the physical host.
 
 ```bash
 # Connect to the simplest server
@@ -104,6 +106,8 @@ opc.tcp://localhost:4846/UA/TestServer   # Sign Only
 opc.tcp://localhost:4847/UA/TestServer   # Legacy
 opc.tcp://localhost:4848/UA/TestServer   # ECC NIST (P-256, P-384)
 opc.tcp://localhost:4849/UA/TestServer   # ECC Brainpool (P-256r1, P-384r1)
+opc.udp://127.0.0.1:14850                # PubSub Publisher (UADP, via relay on host port 14850)
+opc.tcp://localhost:4851/UA/TestServer   # Security Key Service (GetSecurityKeys)
 ```
 
 ## Certificates
@@ -192,7 +196,7 @@ Detailed documentation is available in the [`docs/`](docs/) folder:
 ## Technology
 
 - **Runtime:** .NET 10.0 (Alpine)
-- **OPC UA Stack:** [OPCFoundation.NetStandard.Opc.Ua.Server](https://www.nuget.org/packages/OPCFoundation.NetStandard.Opc.Ua.Server/) 1.5.x
+- **OPC UA Stack:** [OPCFoundation.NetStandard.Opc.Ua.Server](https://www.nuget.org/packages/OPCFoundation.NetStandard.Opc.Ua.Server/) 1.5.378.134 (pinned — see `src/TestServer/TestServer.csproj` for the rationale)
 - **Configuration:** Environment variables
 - **Certificates:** OpenSSL auto-generation + server self-signed via `CheckApplicationInstanceCertificates()`
 - **Docker image:** `ghcr.io/php-opcua/uanetstandard-test-suite`

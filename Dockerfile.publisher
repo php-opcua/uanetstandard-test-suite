@@ -1,0 +1,20 @@
+FROM mcr.microsoft.com/dotnet/sdk:10.0-preview-alpine AS build
+WORKDIR /src
+
+COPY src/TestPublisher/TestPublisher.csproj ./TestPublisher/
+RUN dotnet restore TestPublisher/TestPublisher.csproj
+
+COPY src/TestPublisher/ ./TestPublisher/
+RUN dotnet publish TestPublisher/TestPublisher.csproj -c Release -o /app --no-restore
+
+FROM mcr.microsoft.com/dotnet/aspnet:10.0-preview-alpine AS runtime
+RUN apk add --no-cache icu-libs icu-data-full
+
+WORKDIR /app
+COPY --from=build /app .
+
+ENV DOTNET_RUNNING_IN_CONTAINER=true
+ENV DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=false
+ENV DOTNET_EnableDiagnostics=0
+
+ENTRYPOINT ["dotnet", "TestPublisher.dll"]

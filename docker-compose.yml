@@ -250,3 +250,96 @@ services:
       certs-generator:
         condition: service_completed_successfully
     restart: unless-stopped
+
+  # === Server 11: Security Key Service (Port 4851) ===
+  # Classic OPC UA server exposing GetSecurityKeys (Part 14 §8.4.2) under
+  # TestServer/SecurityKeyService. Lets subscriber-side clients
+  # (e.g. php-opcua/opcua-client-ext-pubsub's SksGroupKeyProvider)
+  # exercise the real RPC path against a live server instead of only
+  # MockClient. Key material is hardcoded via env — this is a test
+  # server, not a production SKS.
+  opcua-sks:
+    build: .
+    ports:
+      - "4851:4851"
+    volumes:
+      - ./certs:/app/certs
+      - ./config:/app/config:ro
+    environment:
+      OPCUA_PORT: "4851"
+      OPCUA_SERVER_NAME: "SecurityKeyServiceServer"
+      OPCUA_SECURITY_POLICIES: "None"
+      OPCUA_SECURITY_MODES: "None"
+      OPCUA_ALLOW_ANONYMOUS: "true"
+      OPCUA_AUTH_USERS: "false"
+      OPCUA_AUTH_CERTIFICATE: "false"
+      OPCUA_AUTO_ACCEPT_CERTS: "true"
+      OPCUA_ENABLE_SKS: "true"
+      OPCUA_SKS_GROUP_ID: "test-group"
+      OPCUA_SKS_POLICY_URI: "http://opcfoundation.org/UA/SecurityPolicy#PubSub-Aes256-CTR"
+      OPCUA_SKS_TOKEN_ID: "7"
+      OPCUA_SKS_SIGNING_KEY_HEX: "0101010101010101010101010101010101010101010101010101010101010101"
+      OPCUA_SKS_ENCRYPTING_KEY_HEX: "0202020202020202020202020202020202020202020202020202020202020202"
+      OPCUA_SKS_KEY_NONCE_HEX: "03030303"
+      OPCUA_SKS_TIME_TO_NEXT_KEY_MS: "300000"
+      OPCUA_SKS_KEY_LIFETIME_MS: "600000"
+    depends_on:
+      certs-generator:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  # === Server 12: PubSub UDP + UADP Publisher (Port 4850 internal) ===
+  # UA-.NETStandard publisher emitting a deterministic DataSet every
+  # 500 ms. Sends unicast UADP to the companion `opcua-pubsub-relay`
+  # sidecar on the shared `pubsub-net` bridge; the relay forwards to the
+  # physical host on UDP port 14850 via `host.docker.internal`.
+  #
+  # This deliberate two-step path sidesteps platform-specific multicast
+  # behaviour:
+  #   - Linux + Docker Engine (GitHub Actions, bare metal): works.
+  #   - Docker Desktop (Linux / macOS / Windows): works.
+  # The bridge is compose-scoped, so inter-container DNS resolves
+  # `opcua-pubsub-relay` to the relay's container IP automatically.
+  #
+  # All knobs are env-overridable via standard compose variable
+  # substitution.
+  opcua-pubsub:
+    build:
+      context: .
+      dockerfile: Dockerfile.publisher
+    networks:
+      - pubsub-net
+    environment:
+      OPCUA_URL: "${OPCUA_URL:-opc.udp://opcua-pubsub-relay:4850}"
+      OPCUA_NETWORK_INTERFACE: "${OPCUA_NETWORK_INTERFACE-}"
+      OPCUA_PUBLISHER_ID: "${OPCUA_PUBLISHER_ID:-100}"
+      OPCUA_WRITER_GROUP_ID: "${OPCUA_WRITER_GROUP_ID:-1}"
+      OPCUA_DATASET_WRITER_ID: "${OPCUA_DATASET_WRITER_ID:-1}"
+      OPCUA_DATASET_NAME: "${OPCUA_DATASET_NAME:-Simple}"
+      OPCUA_PUBLISH_INTERVAL_MS: "${OPCUA_PUBLISH_INTERVAL_MS:-500}"
+      OPCUA_TICK_INTERVAL_MS: "${OPCUA_TICK_INTERVAL_MS:-250}"
+      OPCUA_LOG_LEVEL: "${OPCUA_LOG_LEVEL:-Information}"
+    depends_on:
+      - opcua-pubsub-relay
+    restart: unless-stopped
+
+  # === PubSub relay sidecar (Port 14850 on the physical host) ===
+  # Stateless socat forwarder that receives the UADP unicast packets
+  # emitted by `opcua-pubsub` on the bridge and re-sends them to
+  # `host.docker.internal:14850` so subscriber-side tests running on the
+  # physical host can listen on 127.0.0.1:14850.
+  opcua-pubsub-relay:
+    image: alpine/socat:latest
+    networks:
+      - pubsub-net
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    command:
+      - -u
+      - UDP-RECV:4850,reuseaddr
+      - UDP-DATAGRAM:host.docker.internal:${OPCUA_PUBSUB_HOST_PORT:-14850}
+    restart: unless-stopped
+
+networks:
+  pubsub-net:
+    driver: bridge

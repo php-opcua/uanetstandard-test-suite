@@ -49,6 +49,17 @@ public class ServerConfig
     public bool IsDiscovery { get; set; } = false;
     public string? DiscoveryUrl { get; set; }
 
+    // Security Key Service (Part 14 §8.4) — off by default, enabled on the dedicated opcua-sks service.
+    public bool EnableSks { get; set; } = false;
+    public string SksGroupId { get; set; } = "test-group";
+    public string SksPolicyUri { get; set; } = "http://opcfoundation.org/UA/SecurityPolicy#PubSub-Aes256-CTR";
+    public int SksTokenId { get; set; } = 1;
+    public string SksSigningKeyHex { get; set; } = new string('0', 62) + "01";
+    public string SksEncryptingKeyHex { get; set; } = new string('0', 62) + "02";
+    public string SksKeyNonceHex { get; set; } = "03030303";
+    public double SksTimeToNextKeyMs { get; set; } = 300000;
+    public double SksKeyLifetimeMs { get; set; } = 600000;
+
     public static ServerConfig FromEnvironment()
     {
         var config = new ServerConfig();
@@ -92,8 +103,21 @@ public class ServerConfig
         config.IsDiscovery = GetEnvBool("OPCUA_IS_DISCOVERY", config.IsDiscovery);
         config.DiscoveryUrl = GetEnv("OPCUA_DISCOVERY_URL", null!);
 
+        config.EnableSks = GetEnvBool("OPCUA_ENABLE_SKS", config.EnableSks);
+        config.SksGroupId = GetEnv("OPCUA_SKS_GROUP_ID", config.SksGroupId);
+        config.SksPolicyUri = GetEnv("OPCUA_SKS_POLICY_URI", config.SksPolicyUri);
+        config.SksTokenId = GetEnvInt("OPCUA_SKS_TOKEN_ID", config.SksTokenId);
+        config.SksSigningKeyHex = GetEnv("OPCUA_SKS_SIGNING_KEY_HEX", config.SksSigningKeyHex);
+        config.SksEncryptingKeyHex = GetEnv("OPCUA_SKS_ENCRYPTING_KEY_HEX", config.SksEncryptingKeyHex);
+        config.SksKeyNonceHex = GetEnv("OPCUA_SKS_KEY_NONCE_HEX", config.SksKeyNonceHex);
+        config.SksTimeToNextKeyMs = GetEnvDouble("OPCUA_SKS_TIME_TO_NEXT_KEY_MS", config.SksTimeToNextKeyMs);
+        config.SksKeyLifetimeMs = GetEnvDouble("OPCUA_SKS_KEY_LIFETIME_MS", config.SksKeyLifetimeMs);
+
         return config;
     }
+
+    private static double GetEnvDouble(string key, double defaultValue)
+        => double.TryParse(Environment.GetEnvironmentVariable(key), System.Globalization.CultureInfo.InvariantCulture, out var v) ? v : defaultValue;
 
     private static string GetEnv(string key, string defaultValue)
         => Environment.GetEnvironmentVariable(key) ?? defaultValue;

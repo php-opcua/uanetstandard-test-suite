@@ -1,11 +1,11 @@
 # UA-.NETStandard Test Server Suite — Documentation
 
-A comprehensive OPC UA server suite designed for testing OPC UA client libraries. Built on `OPCFoundation.NetStandard.Opc.Ua.Server` 1.5.x (.NET 10.0), deployed via Docker Compose as 10 independent server instances covering every major security and authentication scenario.
+A comprehensive OPC UA server suite designed for testing OPC UA client libraries. Built on `OPCFoundation.NetStandard.Opc.Ua.Server` 1.5.x (.NET 10.0), deployed via Docker Compose as 10 client/server instances (ports 4840-4849) plus a PubSub UDP+UADP publisher (port 4850) and a Security Key Service (port 4851).
 
 ## Table of Contents
 
 1. [Setup & Installation](setup.md) — Docker setup, build, run, and teardown
-2. [Server Instances](servers.md) — The 10 server configurations and when to use each
+2. [Server Instances](servers.md) — The 10 client/server configurations + PubSub publisher + Security Key Service and when to use each
 3. [Authentication & Roles](authentication.md) — Users, passwords, roles, permissions, and certificate-based auth
 4. [Security & Certificates](security.md) — Security policies, modes, certificate structure, and trust chain
 5. [Address Space Overview](address-space.md) — Top-level structure and navigation
@@ -26,7 +26,7 @@ A comprehensive OPC UA server suite designed for testing OPC UA client libraries
 ## Quick Start
 
 ```bash
-# Start all 10 servers
+# Start the whole suite (10 client/server + PubSub publisher + SKS)
 docker compose up -d
 
 # Verify they're running
@@ -35,13 +35,20 @@ docker compose ps
 # Connect to the simplest server (no security)
 # Endpoint: opc.tcp://localhost:4840/UA/TestServer
 
+# Listen to the PubSub publisher (UADP via relay sidecar)
+# Endpoint: opc.udp://127.0.0.1:14850
+
+# Fetch PubSub group keys from the SKS
+# Endpoint: opc.tcp://localhost:4851/UA/TestServer
+# Method:   ns=1;s=TestServer/SecurityKeyService/GetSecurityKeys
+
 # Stop everything
 docker compose down
 ```
 
 ## Architecture
 
-A single codebase (`src/TestServer/`) is instantiated 10 times via `docker-compose.yml`, each with different environment variables controlling security, authentication, and features. All servers expose the same address space (~300 nodes).
+The main codebase (`src/TestServer/`) is instantiated 11 times via `docker-compose.yml` — 10 client/server instances covering every security/auth scenario, plus a dedicated Security Key Service instance (SKS) that enables a Part 14 §8.4.2 `GetSecurityKeys` method builder. A separate codebase (`src/TestPublisher/`) ships the PubSub publisher; a companion `opcua-pubsub-relay` sidecar (`alpine/socat`) bridges the UADP frames to the physical host on UDP port 14850.
 
 ```
 Client ──► opcua-no-security    (4840)  No security, anonymous only
@@ -54,6 +61,9 @@ Client ──► opcua-no-security    (4840)  No security, anonymous only
        ──► opcua-legacy         (4847)  Deprecated policies (Basic128, Basic256)
        ──► opcua-ecc-nist       (4848)  ECC NIST (P-256, P-384)
        ──► opcua-ecc-brainpool  (4849)  ECC Brainpool (P-256r1, P-384r1)
+       ──► opcua-sks            (4851)  Security Key Service (GetSecurityKeys)
+
+UDP 14850 ◄─ opcua-pubsub + opcua-pubsub-relay    PubSub UDP+UADP publisher (Part 14), relayed via `host.docker.internal`
 ```
 
 ## Node Count Summary

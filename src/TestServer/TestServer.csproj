@@ -9,8 +9,23 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="OPCFoundation.NetStandard.Opc.Ua.Server" Version="1.5.*" />
-    <PackageReference Include="OPCFoundation.NetStandard.Opc.Ua.Configuration" Version="1.5.*" />
+    <!--
+      Pin UA-.NETStandard to an exact version for reproducibility. The wildcard
+      "1.5.*" would auto-upgrade on every Docker build, which is hostile to
+      a suite whose purpose is to be a stable interop counterpart for client
+      test matrices.
+
+      1.5.378.134 (released 2026-03-26) is the latest stable release that
+      predates the "Secure channel enhancements 2025 11" rework (master
+      commit d188383, merged 2026-04-16). That rework introduces strict
+      OPC UA 1.05.4 ECC behaviour (first sequence number for ECC MUST be 0,
+      wrap at UInt32.MaxValue, additional AEAD policy variants). When the
+      next stable release ships the strict behaviour, bump this pin in lock-
+      step with the client side fix — see opcua-client CHANGELOG for
+      history.
+    -->
+    <PackageReference Include="OPCFoundation.NetStandard.Opc.Ua.Server" Version="1.5.378.134" />
+    <PackageReference Include="OPCFoundation.NetStandard.Opc.Ua.Configuration" Version="1.5.378.134" />
     <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="8.0.*" />
   </ItemGroup>
 

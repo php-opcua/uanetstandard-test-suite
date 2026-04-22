@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>TestPublisher</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!--
+      Pinned in lock-step with TestServer. See src/TestServer/TestServer.csproj
+      for the rationale behind the 1.5.378.134 pin.
+    -->
+    <PackageReference Include="OPCFoundation.NetStandard.Opc.Ua.PubSub" Version="1.5.378.134" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="8.0.*" />
+  </ItemGroup>
+
+</Project>

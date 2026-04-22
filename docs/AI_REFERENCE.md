@@ -27,6 +27,8 @@ opc.tcp://localhost:4846/UA/TestServer   # Basic256Sha256+Sign only, anonymous+u
 opc.tcp://localhost:4847/UA/TestServer   # Basic128Rsa15+Basic256, legacy deprecated
 opc.tcp://localhost:4848/UA/TestServer   # ECC_nistP256+ECC_nistP384
 opc.tcp://localhost:4849/UA/TestServer   # ECC_brainpoolP256r1+ECC_brainpoolP384r1
+opc.tcp://localhost:4851/UA/TestServer   # Security Key Service (GetSecurityKeys)
+opc.udp://127.0.0.1:14850                # PubSub UDP+UADP publisher (Part 14, via relay sidecar)
 ```
 
 ## Server Matrix
@@ -43,6 +45,8 @@ PORT  SERVICE               POLICIES                                          MO
 4847  opcua-legacy          Basic128Rsa15,Basic256                            Sign,SignAndEncrypt    yes   yes   no    yes
 4848  opcua-ecc-nist        ECC_nistP256,ECC_nistP384                         Sign,SignAndEncrypt    yes   yes   yes   yes
 4849  opcua-ecc-brainpool   ECC_brainpoolP256r1,ECC_brainpoolP384r1           Sign,SignAndEncrypt    yes   yes   yes   yes
+4851  opcua-sks             None                                              None                   yes   no    no    yes          exposes GetSecurityKeys (ns=1;s=TestServer/SecurityKeyService)
+14850 opcua-pubsub + opcua-pubsub-relay  PubSub UDP+UADP, mode None       N/A                    N/A   N/A   N/A   N/A          publisher sends unicast to relay on pubsub-net bridge; relay forwards to host.docker.internal:14850
 ```
 
 ## Credentials

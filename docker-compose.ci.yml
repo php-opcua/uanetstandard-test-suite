@@ -33,3 +33,12 @@ services:
 
   opcua-ecc-brainpool:
     restart: "no"
+
+  opcua-sks:
+    restart: "no"
+
+  opcua-pubsub:
+    restart: "no"
+
+  opcua-pubsub-relay:
+    restart: "no"
