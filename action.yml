@@ -1,5 +1,5 @@
 name: 'UA-.NETStandard Test Suite'
-description: 'Start 10 pre-configured OPC UA test servers (.NET 10.0) covering all security policies (RSA + ECC) and auth methods, plus an optional UDP+UADP PubSub publisher.'
+description: 'Start 10 OPC UA test servers (RSA + ECC security), a Security Key Service, and a UDP+UADP PubSub publisher. .NET 10.0.'
 author: 'Gianfrancesco Aurecchia'
 
 branding:

@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v1.2.0 — 2026-04-22
 
 ### Added — Security Key Service (service 11, port 4851)
 
