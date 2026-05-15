@@ -64,7 +64,7 @@ This suite covers the most common OPC UA testing scenarios out of the box, but e
 
 The codebase was designed from the ground up to be extended. Each feature — methods, events, alarms, historical data, structures — lives in its own independent builder class under `src/TestServer/AddressSpace/`. You can modify any of them, remove the ones you don't need, or add entirely new builders without touching the rest. Adding a new variable is a few lines of C#. Adding a whole new address space section is a single class and two lines of wiring.
 
-The **[Customization Guide](docs/customization.md)** walks you through everything step by step:
+The **[Customization Guide](docs/customization/forking-and-adding-nodes.md)** walks you through everything step by step:
 
 - Adding variables, methods, events, alarms, and historical nodes
 - Creating new address space builders from scratch
@@ -75,7 +75,7 @@ If you build something useful on top of this, consider opening a PR or sharing y
 
 ## Already Enough for You?
 
-If the default suite already covers what you need, you're good to go. Jump straight to the **[Quick Start](#quick-start)** below, check the full **[Documentation](docs/README.md)** for every node, method, and alarm available, or head to the **[CI Integration Guide](docs/ci-integration.md)** to plug it into your pipeline in one step.
+If the default suite already covers what you need, you're good to go. Jump straight to the **[Quick Start](#quick-start)** below, check the full **[Documentation](docs/index.md)** for every node, method, and alarm available, or head to the **[CI Integration Guide](docs/ci-integration/github-action.md)** to plug it into your pipeline in one step.
 
 ## Quick Start
 
@@ -166,32 +166,27 @@ You can select which servers to start, set timeouts, and access the generated ce
 
 For real-world usage examples, see the CI workflows in [opcua-client](https://github.com/php-opcua/opcua-client), [opcua-session-manager](https://github.com/php-opcua/opcua-session-manager), and [laravel-opcua](https://github.com/php-opcua/laravel-opcua).
 
-For the full integration guide with all options, certificate usage, version pinning, and examples for other CI systems (GitLab, Jenkins), see **[docs/ci-integration.md](docs/ci-integration.md)**.
+For the full integration guide with all options, certificate usage, version pinning, and examples for other CI systems (GitLab, Jenkins), see **[docs/ci-integration/](docs/ci-integration/github-action.md)**.
 
 ## Documentation
 
-Detailed documentation is available in the [`docs/`](docs/) folder:
+Full documentation is available in [`docs/`](docs/index.md). Highlights:
 
-| Document | Description |
-|---|---|
-| [Setup & Installation](docs/setup.md) | Docker setup, environment variables, certificate regeneration |
-| [Server Instances](docs/servers.md) | The 10 servers explained: when and why to use each one |
-| [Authentication & Roles](docs/authentication.md) | Users, passwords, roles, and permissions matrix |
-| [Security & Certificates](docs/security.md) | Policies, modes, certificate files, trust chain |
-| [Address Space Overview](docs/address-space.md) | Top-level structure and navigation |
-| [Data Types](docs/data-types.md) | All scalar types, arrays, matrices, and analog items |
-| [Methods](docs/methods.md) | 12 methods with full signatures and testing checklist |
-| [Dynamic Variables](docs/dynamic-variables.md) | Time-varying variables and subscription testing |
-| [Events & Alarms](docs/events-and-alarms.md) | Custom event types, periodic events, alarm conditions |
-| [Historical Data](docs/historical-data.md) | HistoryRead operations and historical variables |
-| [Structures](docs/structures.md) | Nested objects, collections, deep nesting |
-| [Extension Objects](docs/extension-objects.md) | Binary-encoded custom structured types (PointValue, RangeValue) |
-| [Access Control](docs/access-control.md) | Access levels, role-based folders, type/access combinations |
-| [Views](docs/views.md) | 4 OPC UA views for filtered browsing |
-| [Testing Guide](docs/testing-guide.md) | Step-by-step test scenarios for every feature |
-| [CI Integration](docs/ci-integration.md) | GitHub Actions, GitLab CI, Docker Compose usage |
-| [Customization](docs/customization.md) | How to fork and build your own OPC UA simulations |
-| [AI Reference](docs/AI_REFERENCE.md) | Single-file machine-readable reference for AI tools |
+| Section | Covers |
+|---------|--------|
+| **Getting started** — [Overview](docs/overview.md) · [Installation](docs/getting-started/installation.md) · [Quick start](docs/getting-started/quick-start.md) · [First connection](docs/getting-started/first-connection.md) | Concepts, install, smoke test |
+| **Server instances** — [Overview](docs/server-instances/overview.md) · [Classic RSA & ECC](docs/server-instances/classic-rsa-and-ecc.md) · [Special-purpose](docs/server-instances/special-purpose.md) | The 10 servers explained |
+| **Security** — [Policies & modes](docs/security/policies-and-modes.md) · [Certificates](docs/security/certificates.md) · [Trust flow](docs/security/trust-flow.md) | Security policies, certificates, trust |
+| **Authentication** — [User accounts & roles](docs/authentication/user-accounts-and-roles.md) · [Certificate authentication](docs/authentication/certificate-authentication.md) | Auth methods and role matrix |
+| **Address space** — [Overview](docs/address-space/overview.md) · [Browse paths & access levels](docs/address-space/browse-paths-and-access-levels.md) | Address-space navigation |
+| **Data features** — [Scalar types](docs/data-features/scalar-types.md) · [Arrays & matrices](docs/data-features/arrays-and-matrices.md) · [Structures & extension objects](docs/data-features/structures-and-extension-objects.md) · [Access control](docs/data-features/access-control.md) | Data types and structured data |
+| **Runtime features** — [Methods](docs/runtime-features/methods.md) · [Dynamic variables](docs/runtime-features/dynamic-variables.md) · [Events](docs/runtime-features/events.md) · [Alarms](docs/runtime-features/alarms.md) · [Historical data](docs/runtime-features/historical-data.md) | Live behaviour and history |
+| **Special features** — [Views](docs/special-features/views.md) · [Security Key Service](docs/special-features/security-key-service.md) · [PubSub publisher](docs/special-features/pubsub-publisher.md) | Views, SKS, PubSub |
+| **CI integration** — [GitHub Action](docs/ci-integration/github-action.md) · [Docker Compose & other CI](docs/ci-integration/docker-compose-and-other-ci.md) | Plug into CI pipelines |
+| **Testing patterns** — [Basic tests](docs/testing-patterns/basic-tests.md) · [Subscription & method tests](docs/testing-patterns/subscription-and-method-tests.md) · [Security tests](docs/testing-patterns/security-tests.md) | Recommended test recipes |
+| **Customization** — [Forking & adding nodes](docs/customization/forking-and-adding-nodes.md) · [Adding server instances](docs/customization/adding-server-instances.md) · [Simulation recipes](docs/customization/simulation-recipes.md) | Build your own variant |
+| **Reference** — [Environment variables](docs/reference/environment-variables.md) · [Ports & endpoints](docs/reference/ports-and-endpoints.md) · [Troubleshooting](docs/reference/troubleshooting.md) | Reference tables |
+| [AI Reference](AI_REFERENCE.md) | Single-file machine-readable reference for AI tools (kept at repo root) |
 
 ## Technology
 
@@ -207,7 +202,7 @@ For bug reports, feature requests, or questions, please open an issue on [GitHub
 
 ## AI Disclosure
 
-This project was built in part with the assistance of **Claude** (Anthropic). The AI contributed to code generation, documentation writing, and architecture decisions. All outputs were reviewed and validated by the author. The [AI Reference](docs/AI_REFERENCE.md) document was specifically designed to be consumed by AI coding assistants working with this project.
+This project was built in part with the assistance of **Claude** (Anthropic). The AI contributed to code generation, documentation writing, and architecture decisions. All outputs were reviewed and validated by the author. The [AI Reference](AI_REFERENCE.md) document was specifically designed to be consumed by AI coding assistants working with this project.
 
 ## License
 

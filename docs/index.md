@@ -1,0 +1,51 @@
+# Documentation Index
+
+- Getting started
+  - [Overview](./overview.md)
+  - [Installation](./getting-started/installation.md)
+  - [Quick start](./getting-started/quick-start.md)
+  - [First connection](./getting-started/first-connection.md)
+- Server instances
+  - [Overview](./server-instances/overview.md)
+  - [Classic RSA and ECC servers](./server-instances/classic-rsa-and-ecc.md)
+  - [Special-purpose servers](./server-instances/special-purpose.md)
+- Security
+  - [Policies and modes](./security/policies-and-modes.md)
+  - [Certificates](./security/certificates.md)
+  - [Trust flow](./security/trust-flow.md)
+- Authentication
+  - [User accounts and roles](./authentication/user-accounts-and-roles.md)
+  - [Certificate authentication](./authentication/certificate-authentication.md)
+- Address space
+  - [Overview](./address-space/overview.md)
+  - [Browse paths and access levels](./address-space/browse-paths-and-access-levels.md)
+- Data features
+  - [Scalar types](./data-features/scalar-types.md)
+  - [Arrays and matrices](./data-features/arrays-and-matrices.md)
+  - [Structures and extension objects](./data-features/structures-and-extension-objects.md)
+  - [Access control](./data-features/access-control.md)
+- Runtime features
+  - [Methods](./runtime-features/methods.md)
+  - [Dynamic variables](./runtime-features/dynamic-variables.md)
+  - [Events](./runtime-features/events.md)
+  - [Alarms](./runtime-features/alarms.md)
+  - [Historical data](./runtime-features/historical-data.md)
+- Special features
+  - [Views](./special-features/views.md)
+  - [Security Key Service](./special-features/security-key-service.md)
+  - [PubSub publisher](./special-features/pubsub-publisher.md)
+- CI integration
+  - [GitHub Action](./ci-integration/github-action.md)
+  - [Docker Compose and other CI](./ci-integration/docker-compose-and-other-ci.md)
+- Testing patterns
+  - [Basic tests](./testing-patterns/basic-tests.md)
+  - [Subscription and method tests](./testing-patterns/subscription-and-method-tests.md)
+  - [Security tests](./testing-patterns/security-tests.md)
+- Customization
+  - [Forking and adding nodes](./customization/forking-and-adding-nodes.md)
+  - [Adding server instances](./customization/adding-server-instances.md)
+  - [Simulation recipes](./customization/simulation-recipes.md)
+- Reference
+  - [Environment variables](./reference/environment-variables.md)
+  - [Ports and endpoints](./reference/ports-and-endpoints.md)
+  - [Troubleshooting](./reference/troubleshooting.md)
