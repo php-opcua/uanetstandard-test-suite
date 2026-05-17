@@ -20,16 +20,25 @@ both — but the validation paths are independent.
 
 ## Servers that accept cert auth
 
-| Server               | Accepts cert auth | Notes                                      |
-| -------------------- | ----------------- | ------------------------------------------ |
-| `opcua-certificate`  | ✓                 | Only cert auth (no anon, no userpass)      |
-| `opcua-all-security` | ✓                 | Cert auth + anon + userpass                |
-| `opcua-auto-accept`  | ✓                 | Auto-trusts any client cert                |
-| `opcua-ecc-nist`     | ✓                 | ECC client cert needed                     |
-| `opcua-ecc-brainpool` | ✓                | ECC client cert needed                     |
+| Server               | Accepts cert auth | Notes                                                                       |
+| -------------------- | ----------------- | --------------------------------------------------------------------------- |
+| `opcua-certificate`  | ✓                 | Only cert auth (no anon, no userpass)                                       |
+| `opcua-all-security` | ✓                 | Cert auth + anon + userpass                                                 |
+| `opcua-auto-accept`  | ✓                 | Auto-trusts any client cert                                                 |
+| `opcua-ecc-nist`     | ✓                 | Both anon/userpass/cert; channel policies are ECC (`nistP256`/`nistP384`)   |
+| `opcua-ecc-brainpool` | ✓                | Same as above with Brainpool curves                                         |
 
 Other servers either don't enable cert auth or use it only for
 the secure channel.
+
+Note: both ECC servers run with `OPCUA_AUTO_ACCEPT_CERTS=true`
+in `docker-compose.yml`, so any client cert presented to them
+(even self-signed) will be trusted. The user-identity token
+itself is honoured if it is an `X509IdentityToken`. The trusted
+RSA cert in `certs/client/cert.pem` will satisfy the
+user-identity validation, but **the channel handshake** requires
+a key matching the ECC policy — clients that only have an RSA
+keypair cannot complete the secure channel on these endpoints.
 
 ## The cert files
 

@@ -21,12 +21,19 @@ specific alarm state.
 
 ## Source variables
 
-| BrowsePath              | Type      | Access | Behaviour                                |
-| ----------------------- | --------- | ------ | ---------------------------------------- |
-| `Alarms/AlarmSourceValue` | Double  | RW     | `50 + 60 · sin(t)` every 1 s, range ≈ `-10 .. 110` |
-| `Alarms/OffNormalSource` | Boolean  | RW     | Toggles every 20 s                       |
+| BrowsePath                | Type    | Access | Initial value | Auto-update?             |
+| ------------------------- | ------- | ------ | ------------- | ------------------------ |
+| `Alarms/AlarmSourceValue` | Double  | RW     | `50.0`        | **No** — clients must write |
+| `Alarms/OffNormalSource`  | Boolean | RW     | `false`       | **No** — clients must write |
 
-Writes update them immediately and the alarms transition.
+Neither source is driven by a timer. Both stay at their initial
+value until a client writes a new value, at which point the
+alarm-evaluation timer (which fires every second) picks up the
+new reading and updates the alarm state on the next tick.
+
+This is a deliberate test design: it lets you assert exact
+transitions deterministically, without racing against an
+internal oscillator.
 
 ## HighTemperatureAlarm (ExclusiveLimitAlarm)
 
@@ -36,18 +43,18 @@ Writes update them immediately and the alarms transition.
 | Source          | `Alarms/AlarmSourceValue`     |
 | LowLow limit    | 5                             |
 | Low limit       | 20                            |
-| High limit      | 70                            |
-| HighHigh limit  | 90                            |
+| High limit      | 80                            |
+| HighHigh limit  | 95                            |
 
-States (mutually exclusive):
-
-| `AlarmSourceValue`  | Active state  |
-| ------------------- | ------------- |
-| `> 90`              | HighHigh      |
-| `70 < v ≤ 90`       | High          |
-| `20 ≤ v ≤ 70`       | Normal (inactive) |
-| `5 ≤ v < 20`        | Low           |
-| `v < 5`             | LowLow        |
+The server-side update logic only checks the broader `value > 80
+|| value < 20` predicate and sets `Severity = 800` / `ActiveState
+= "Active"` for it, otherwise `Severity = 100` / `ActiveState =
+"Inactive"`. It does not split between High vs. HighHigh in the
+limit-state machine — the alarm just flips between two severity
+levels around the outer limits. The `LowLow` and `HighHigh`
+properties are still exposed on the alarm node for clients that
+read them, but they do not gate a distinct state in the current
+implementation.
 
 ## LevelAlarm (NonExclusiveLimitAlarm)
 
@@ -55,13 +62,19 @@ States (mutually exclusive):
 | --------------- | ----------------------------- |
 | Type            | `NonExclusiveLimitAlarmType`  |
 | Source          | `Alarms/AlarmSourceValue`     |
-| LowLow limit    | 0                             |
-| Low limit       | 15                            |
+| LowLow limit    | 10                            |
+| Low limit       | 25                            |
 | High limit      | 75                            |
-| HighHigh limit  | 95                            |
+| HighHigh limit  | 90                            |
 
-Multiple states can be active at once. If the value is 96, both
-`High` and `HighHigh` are active.
+The limit properties are exposed on the node, but the
+evaluation timer in the current implementation only updates the
+`HighTemperatureAlarm` and `OffNormalAlarm`. `LevelAlarm` keeps
+its `EnabledState = "Enabled"`, `ActiveState = "Inactive"` and
+`Severity = Low` set by `InitializeNonExclusiveAlarm`; it does
+not actively transition based on `AlarmSourceValue`. If you need
+multi-bit state transitions, drive the assertions off
+`HighTemperatureAlarm` instead.
 
 ## OffNormalAlarm
 
@@ -90,36 +103,24 @@ Each takes the alarm's current `EventId` + an optional comment.
 
 ## Test patterns
 
-### Watch transitions naturally
+### Drive transitions explicitly
 
-`AlarmSourceValue` oscillates as `50 + 60·sin(t)` — over one
-period (~`2π` seconds), it visits every threshold:
+There is no automatic oscillator. Each transition you want
+must be triggered with a write to `AlarmSourceValue`. The
+evaluation timer reacts within ~1 s.
 
-| Time (approx) | Value     | HighTemp state | Level state           |
-| ------------- | --------- | -------------- | --------------------- |
-| 0 s           | 50         | Normal         | Normal                |
-| ~2 s          | 100        | HighHigh       | High + HighHigh        |
-| ~3 s          | 50         | Normal         | Normal                |
-| ~5 s          | -10        | LowLow         | Low + LowLow           |
-| ~6 s          | 50         | Normal         | Normal                |
+| Write to `AlarmSourceValue` | `HighTemperatureAlarm.ActiveState` | `Severity` |
+| --------------------------- | ----------------------------------- | ---------- |
+| `50.0` (initial)             | `Inactive`                          | `100`      |
+| `100.0`                      | `Active`                            | `800`      |
+| `15.0`                       | `Active`                            | `800`      |
+| `30.0`                       | `Inactive`                          | `100`      |
+| `-5.0`                       | `Active`                            | `800`      |
 
-Subscribe to events on the `Alarms` folder (or `Server`) and
-verify you see the transitions.
-
-### Force a specific state
-
-```text
-write(Alarms/AlarmSourceValue, 100.0)
-→ HighTemp: HighHigh active
-→ Level:    High + HighHigh active
-
-write(Alarms/AlarmSourceValue, 50.0)
-→ both back to Normal
-
-write(Alarms/AlarmSourceValue, -5.0)
-→ HighTemp: LowLow
-→ Level:    Low + LowLow
-```
+`LevelAlarm` does not currently transition with these writes
+(see the note above). If your client needs a non-exclusive limit
+flow with active state changes, treat that as a TODO against the
+suite rather than an observable behaviour.
 
 ### OffNormal toggle
 

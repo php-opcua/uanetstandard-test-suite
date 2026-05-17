@@ -20,28 +20,33 @@ Path: `TestServer / DataTypes / Array`
 
 20 arrays with `valueRank = 1`. All RW.
 
-| BrowseName            | ElementType    | Initial value                                  |
-| --------------------- | -------------- | ---------------------------------------------- |
-| `BooleanArray`        | Boolean[]      | `[true, false, true, false]`                   |
-| `SByteArray`          | SByte[]        | `[-128, -1, 0, 1, 127]`                        |
-| `ByteArray`           | Byte[]         | `[0, 42, 128, 255]`                            |
-| `Int16Array`          | Int16[]        | `[-32768, -1, 0, 1, 32767]`                    |
-| `UInt16Array`         | UInt16[]       | `[0, 1000, 50000, 65535]`                      |
-| `Int32Array`          | Int32[]        | `[-100000, -1, 0, 1, 100000]`                  |
-| `UInt32Array`         | UInt32[]       | `[0, 100000, 1000000, 4294967295]`             |
-| `Int64Array`          | Int64[]        | `[0, -1000000, 1000000]`                       |
-| `UInt64Array`         | UInt64[]       | `[0, 1000000, 999999999]`                      |
-| `FloatArray`          | Float[]        | `[1.1, 2.2, 3.3, 4.4]`                         |
-| `DoubleArray`         | Double[]       | `[1.11, 2.22, 3.33, 4.44, 5.55]`               |
-| `StringArray`         | String[]       | `["Hello", "OPC", "UA", "World"]`              |
-| `DateTimeArray`       | DateTime[]     | `[2024-01-01, 2024-06-15, now]`                |
-| `GuidArray`           | Guid[]         | `[72962B91-..., A1B2C3D4-...]`                 |
-| `ByteStringArray`     | ByteString[]   | `["First", "Second", "Third"]`                 |
-| `XmlElementArray`     | XmlElement[]   | `["<a/>", "<b/>", "<c/>"]`                     |
-| `NodeIdArray`         | NodeId[]       | `[ns=1;s=arr-0, ns=1;s=arr-1]`                 |
-| `StatusCodeArray`     | StatusCode[]   | `[Good, BadInternalError, UncertainLastUsableValue]` |
-| `QualifiedNameArray`  | QualifiedName[] | `[1:QN_A, 1:QN_B]`                            |
-| `LocalizedTextArray`  | LocalizedText[] | `[en:Hello, it:Ciao, de:Hallo]`               |
+Initial values come straight from
+`src/TestServer/AddressSpace/DataTypesBuilder.cs`. Most arrays are
+intentionally short (3 elements) — the suite optimises for
+boundary coverage and round-trip checks, not for stress data.
+
+| BrowseName            | ElementType     | Initial value                                                   |
+| --------------------- | --------------- | --------------------------------------------------------------- |
+| `BooleanArray`        | Boolean[]       | `[true, false, true]`                                           |
+| `SByteArray`          | SByte[]         | `[-1, 0, 1]`                                                    |
+| `ByteArray`           | Byte[]          | `[1, 2, 3]`                                                     |
+| `Int16Array`          | Int16[]         | `[-100, 0, 100]`                                                |
+| `UInt16Array`         | UInt16[]        | `[100, 200, 300]`                                               |
+| `Int32Array`          | Int32[]         | `[-1000, 0, 1000]`                                              |
+| `UInt32Array`         | UInt32[]        | `[1000, 2000, 3000]`                                            |
+| `Int64Array`          | Int64[]         | `[-100000, 0, 100000]`                                          |
+| `UInt64Array`         | UInt64[]        | `[100000, 200000, 300000]`                                      |
+| `FloatArray`          | Float[]         | `[1.1, 2.2, 3.3]`                                               |
+| `DoubleArray`         | Double[]        | `[1.11, 2.22, 3.33]`                                            |
+| `StringArray`         | String[]        | `["one", "two", "three"]`                                       |
+| `DateTimeArray`       | DateTime[]      | `[now, now + 1h, now + 2h]` (captured at server startup)        |
+| `GuidArray`           | Guid[]          | Three fresh `Guid.NewGuid()` values per server start            |
+| `ByteStringArray`     | ByteString[]    | `[ [0x01], [0x02], [0x03] ]` (three single-byte byte strings)   |
+| `XmlElementArray`     | XmlElement[]    | `Array.Empty<XmlElement>()` (length 0)                          |
+| `NodeIdArray`         | NodeId[]        | `[ns=0;i=1, ns=0;i=2]`                                          |
+| `StatusCodeArray`     | StatusCode[]    | `[Good, Bad]`                                                   |
+| `QualifiedNameArray`  | QualifiedName[] | `[1:a, 1:b]`                                                    |
+| `LocalizedTextArray`  | LocalizedText[] | `[en:one, en:two]`                                              |
 
 ## 1D arrays (read-only)
 
@@ -53,11 +58,11 @@ Six arrays with `accessLevel = CurrentRead`. Writes return
 | BrowseName            | Value                            |
 | --------------------- | -------------------------------- |
 | `BooleanArray_RO`     | `[true, false]`                  |
-| `Int32Array_RO`       | `[1, 2, 3]`                      |
-| `DoubleArray_RO`      | `[1.1, 2.2, 3.3]`                |
-| `StringArray_RO`      | `["A", "B", "C"]`                |
-| `ByteArray_RO`        | `[0, 127, 255]`                  |
-| `DateTimeArray_RO`    | `[2024-01-01, 2024-06-15]`       |
+| `Int32Array_RO`       | `[10, 20, 30]`                   |
+| `DoubleArray_RO`      | `[1.0, 2.0, 3.0]`                |
+| `StringArray_RO`      | `["read", "only"]` (2 elements)  |
+| `ByteArray_RO`        | `[0xAA, 0xBB]` (2 elements)      |
+| `DateTimeArray_RO`    | `[DateTime.UtcNow]` (1 element, captured at startup) |
 
 ## Empty arrays
 
@@ -93,11 +98,11 @@ Path: `TestServer / DataTypes / MultiDimensional`
 Three matrices with `valueRank > 1`. Stored as a flat array
 with `arrayDimensions` metadata, **row-major** ordering.
 
-| BrowseName         | Type      | Dimensions | Storage (flat)                          |
-| ------------------ | --------- | ---------- | --------------------------------------- |
-| `Matrix2D_Double`  | Double    | 3 × 3      | `[1,2,3, 4,5,6, 7,8,9]` (9 elements)   |
-| `Matrix2D_Int32`   | Int32     | 2 × 4      | `[1,2,3,4, 5,6,7,8]` (8 elements)      |
-| `Cube3D_Byte`      | Byte      | 2 × 3 × 4 | `0..23` (24 elements, row-major)        |
+| BrowseName         | Type      | Dimensions | Initial value (row-major)                              |
+| ------------------ | --------- | ---------- | ------------------------------------------------------ |
+| `Matrix2D_Double`  | Double    | 3 × 3      | `[[1,2,3], [4,5,6], [7,8,9]]`                          |
+| `Matrix2D_Int32`   | Int32     | 2 × 4      | `[[1,2,3,4], [5,6,7,8]]`                               |
+| `Cube3D_Byte`      | Byte      | 2 × 3 × 4 | `new byte[2,3,4]` — all 24 elements default to `0`     |
 
 To address element `[i,j]` of a 2D matrix in flat storage:
 

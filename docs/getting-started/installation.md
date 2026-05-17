@@ -31,12 +31,21 @@ docker compose up -d
 ```
 <!-- @endcode-block -->
 
-That brings up:
+That brings up (per `docker-compose.yml`):
 
-- 1 certificate-generator init container.
-- 10 classic test servers (4840-4849).
-- 1 Security Key Service (4851).
-- 1 PubSub publisher + 1 socat relay (UDP 14850 on the host).
+- 1 certificate-generator init container (`certs-generator`,
+  exits with `Completed` once the cert tree is ready).
+- 10 classic test servers (`opcua-no-security`, `opcua-userpass`,
+  `opcua-certificate`, `opcua-all-security`, `opcua-discovery`,
+  `opcua-auto-accept`, `opcua-sign-only`, `opcua-legacy`,
+  `opcua-ecc-nist`, `opcua-ecc-brainpool` — host TCP ports
+  4840-4849).
+- 1 Security Key Service (`opcua-sks`, port 4851).
+- 1 PubSub publisher (`opcua-pubsub`) + 1 socat relay
+  (`opcua-pubsub-relay`, UDP 14850 on the host).
+
+That is 14 compose services total, 13 of which keep running
+after `certs-generator` completes.
 
 First start takes 30-60 seconds — most of that is the cert
 generator producing the CA, server, client, self-signed, and
@@ -87,9 +96,12 @@ docker compose ps
 ```
 <!-- @endcode-block -->
 
-You should see ~13 services with state `running` (one of them,
-`certs-generator`, may be `completed` — that's expected, it
-exits after generating).
+You should see 13 services with state `running` (10 classic
+servers + SKS + PubSub publisher + PubSub relay) and
+`certs-generator` reported as `Completed` — that's expected, it
+exits after generating. Only `opcua-no-security` has a Docker
+healthcheck defined, so it's the only one that will eventually
+show `healthy`; the rest just stay at `running`.
 
 Quick TCP probe:
 
@@ -137,19 +149,14 @@ docker compose up -d
 
 ## Image source
 
-The default `docker-compose.yml` builds from the local
-`Dockerfile`. For CI where you don't want to build, point at the
-published image:
-
-<!-- @code-block language="bash" label=".env (CI)" -->
-```bash
-OPCUA_SERVER_IMAGE=ghcr.io/php-opcua/uanetstandard-test-suite:latest
-```
-<!-- @endcode-block -->
-
-The CI compose override (`docker-compose.ci.yml`) does this
-plus disables auto-restart — see
-[CI integration · Docker Compose and other CI](../ci-integration/docker-compose-and-other-ci.md).
+Both `docker-compose.yml` and `docker-compose.ci.yml` build the
+image from the local `Dockerfile` (`build: .`) on every
+`docker compose up --build`. The shipped configuration does not
+consume an `OPCUA_SERVER_IMAGE` variable. To run against a
+pre-built registry image, you would need to add a third compose
+file with `image:` fields per service. See
+[CI integration · Docker Compose and other CI](../ci-integration/docker-compose-and-other-ci.md)
+for the CI-specific differences.
 
 ## Resource usage
 

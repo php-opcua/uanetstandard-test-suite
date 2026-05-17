@@ -65,9 +65,9 @@ Structures/TestNested/
 ├── Label       (String, RW, "origin")
 ├── Timestamp   (DateTime, RW, startup time)
 └── Point       (Object)
-    ├── X       (Double, RW, 0.0)
-    ├── Y       (Double, RW, 0.0)
-    └── Z       (Double, RW, 0.0)
+    ├── X       (Double, RW, 10.0)
+    ├── Y       (Double, RW, 20.0)
+    └── Z       (Double, RW, 30.0)
 ```
 
 `Point` is reached via the `HasComponent` reference. The browse
@@ -75,15 +75,23 @@ needs two hops from `TestNested` to read `X`/`Y`/`Z`.
 
 ### PointCollection
 
-Five identically-shaped `Point_N` objects:
+Five identically-shaped `Point_N` objects. The initial coordinate
+values are seeded with `new Random(42)` and assigned by repeated
+`rng.NextDouble() * 100` calls in `StructuresBuilder.cs`. Because
+the seed is fixed, the values are deterministic across server
+restarts, but they are **not** the round multiples sometimes
+documented in test specs — they fall somewhere in
+`[0, 100)` for each coordinate. Read them to discover the actual
+values for your environment, or treat them as opaque test data
+and only assert structural shape:
 
 ```text
 Structures/PointCollection/
-├── Point_0 → (X=0,   Y=0,   Z=0  )
-├── Point_1 → (X=10,  Y=20,  Z=30 )
-├── Point_2 → (X=20,  Y=40,  Z=60 )
-├── Point_3 → (X=30,  Y=60,  Z=90 )
-└── Point_4 → (X=40,  Y=80,  Z=120)
+├── Point_0 → (X, Y, Z each a Double in [0, 100))
+├── Point_1 → (X, Y, Z each a Double in [0, 100))
+├── Point_2 → (X, Y, Z each a Double in [0, 100))
+├── Point_3 → (X, Y, Z each a Double in [0, 100))
+└── Point_4 → (X, Y, Z each a Double in [0, 100))
 ```
 
 Useful for testing "browse all children, then read all
@@ -115,13 +123,21 @@ Each level has a `Depth` (UInt32) and `Name` (String).
 Path: `TestServer / ExtensionObjects`
 
 Two variables whose Value attribute is a **binary `ExtensionObject`**
-— a single typed blob with all fields encoded together. Defined in
-the `ns=3` namespace.
+— a single typed blob with all fields encoded together. The types
+are defined in the third namespace
+(`urn:opcua:test-server:custom-types`); resolve its index from
+`Server.NamespaceArray` at runtime — it has historically been
+`ns=3` but is not pinned by the SDK.
 
-| Variable      | TypeId          | Encoding TypeId | Initial               | Access |
-| ------------- | --------------- | --------------- | --------------------- | ------ |
-| `PointValue`  | `ns=3;i=3010` (TestPointXYZ) | `ns=3;i=...` | `{X:1.5, Y:2.5, Z:3.5}` | RW    |
-| `RangeValue`  | `ns=3;i=3011` (TestRangeStruct) | `ns=3;i=...` | `{Min:0.0, Max:100.0, Value:42.5}` | R |
+In the table below `<ct>` is that resolved index. The DataType
+node uses one numeric id and the `Default Binary` encoding node
+uses a different one — `ExtensionObject` values carry the
+**encoding** NodeId in their `typeId` field.
+
+| Variable      | DataType (TypeDefinition) | `Default Binary` encoding NodeId | Initial                         | Access |
+| ------------- | ------------------------- | --------------------------------- | -------------------------------- | ------ |
+| `PointValue`  | `ns=<ct>;i=3000` (`TestPointXYZ`)    | `ns=<ct>;i=3010`        | `{X:1.5, Y:2.5, Z:3.5}`          | RW     |
+| `RangeValue`  | `ns=<ct>;i=3001` (`TestRangeStruct`) | `ns=<ct>;i=3011`        | `{Min:0.0, Max:100.0, Value:42.5}` | R    |
 
 ### Binary body
 
@@ -130,18 +146,18 @@ Both types are 3 × 8 bytes (3 IEEE-754 doubles, little-endian):
 ```text
 PointValue body (24 bytes):
   X (8 bytes) | Y (8 bytes) | Z (8 bytes)
-  TypeId:  ns=3;i=3010
+  TypeId (encoding):  ns=<ct>;i=3010
 
 RangeValue body (24 bytes):
   Min (8 bytes) | Max (8 bytes) | Value (8 bytes)
-  TypeId:  ns=3;i=3011
+  TypeId (encoding):  ns=<ct>;i=3011
 ```
 
 ### Reading
 
 ```text
 ev = read(node)
-assert ev.typeId == NodeId("ns=3;i=3010")
+assert ev.typeId == NodeId(custom_types_ns, 3010)
 fields = decode(ev.body, TestPointXYZ)
 assert fields.X == 1.5
 ```
@@ -150,20 +166,23 @@ assert fields.X == 1.5
 
 ```text
 body = encode({X: 10.0, Y: 20.0, Z: 30.0}, TestPointXYZ)
-write(node, ExtensionObject(typeId="ns=3;i=3010", body=body))
+write(node, ExtensionObject(typeId=NodeId(custom_types_ns, 3010), body=body))
 ```
 
 ### Type discovery
 
-The type's structure is reachable via the namespace:
+The DataType node is reachable via the custom-types namespace:
 
 ```text
-Browse ns=3 → find TestPointXYZ DataType node
-Read DataTypeDefinition attribute → field list (X, Y, Z, all Double)
+Browse the custom-types namespace → find TestPointXYZ DataType node (i=3000)
+                                 → child encoding `Default Binary` (i=3010)
 ```
 
-A type-dictionary-aware client should be able to decode the
-binary without manual configuration.
+The server registers `DataTypeState` nodes with
+`SuperTypeId = DataTypeIds.Structure`. There is no
+`DataTypeDefinition` attribute populated, so type-dictionary-only
+clients will need to know the layout (`3 × Double`, little-endian)
+out of band.
 
 ### Read-only RangeValue
 
@@ -191,10 +210,13 @@ binary without manual configuration.
 
 ### Extension objects
 
-- Read `PointValue` → verify `typeId` and decode body.
+- Read `PointValue` → verify the `typeId` matches the resolved
+  encoding NodeId (`i=3010` in the custom-types namespace) and
+  decode the body.
 - Write a new value → read back → verify round-trip.
 - Read `RangeValue` → assert `Bad_NotWritable` on write.
-- Browse `ns=3` → discover `TestPointXYZ` and `TestRangeStruct`.
+- Browse the custom-types namespace → discover `TestPointXYZ`
+  (`i=3000`) and `TestRangeStruct` (`i=3001`) as DataType nodes.
 
 ## Where to read next
 

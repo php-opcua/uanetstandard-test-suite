@@ -55,8 +55,8 @@ Test the negative paths too:
 | Test                                | Expected                       |
 | ----------------------------------- | ------------------------------ |
 | Valid username + valid password     | Session created                |
-| Valid username + wrong password     | `Bad_IdentityTokenRejected`    |
-| Unknown username                    | `Bad_IdentityTokenRejected`    |
+| Valid username + wrong password     | `Bad_UserAccessDenied`         |
+| Unknown username                    | `Bad_UserAccessDenied`         |
 | Anonymous on this server            | `Bad_IdentityTokenRejected`    |
 
 The server's certificate is **CA-signed**. Your client needs the

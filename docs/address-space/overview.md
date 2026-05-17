@@ -13,24 +13,35 @@ next: { label: 'Browse paths and access levels', href: './browse-paths-and-acces
 
 # Address space overview
 
-All ten classic servers expose the same address space, ~300
-nodes, rooted under one folder.
+All ten classic servers expose the same application address
+space — around 200 custom nodes rooted under one folder, plus
+the framework nodes that every UA-.NETStandard server provides
+in `ns=0`.
 
 ## Namespaces
 
-| Index | URI                                     | What lives here                                   |
-| ----- | --------------------------------------- | ------------------------------------------------- |
-| 0     | `http://opcfoundation.org/UA/`          | Standard OPC UA nodes (Objects, Server, …)         |
-| 1     | `urn:opcua:testserver:nodes`            | All custom test nodes                              |
-| 2     | `http://opcfoundation.org/UA/DI/`       | Device Integration namespace (mostly empty)        |
-| 3     | `urn:opcua:test-server:custom-types`    | Extension-object type definitions                  |
-| 4     | `http://opcfoundation.org/UA/Diagnostics` | Diagnostics namespace (mostly empty)             |
+`TestNodeManager` registers exactly three URIs at construction
+time:
+
+| Order | URI                                  | What lives here                                                        |
+| ----- | ------------------------------------ | ---------------------------------------------------------------------- |
+| 1     | `urn:opcua:testserver:nodes`         | All custom test nodes (typically resolves to `ns=1`)                   |
+| 2     | `http://opcfoundation.org/UA/DI/`    | Reserved for Device Integration types — currently empty                |
+| 3     | `urn:opcua:test-server:custom-types` | Extension-object DataType + encoding nodes (typically `ns=3`)          |
+
+`http://opcfoundation.org/UA/` is always present in any UA
+server as `ns=0`. The actual numeric index for each of the
+custom URIs above is assigned by the SDK at startup and should
+be read out of `Server.NamespaceArray` rather than hardcoded —
+the indices above are the **typical** allocations and have been
+stable across builds, but they are not pinned.
 
 Almost everything tests reach for is in `ns=1`. Extension-object
-type definitions and their encoding nodes are in `ns=3` (these
-are what your client decodes when reading
-`ExtensionObjects/PointValue` — see [Structures and extension
-objects](../data-features/structures-and-extension-objects.md)).
+type definitions and their encoding nodes are in
+`urn:opcua:test-server:custom-types` (typically `ns=3`); see
+[Structures and extension
+objects](../data-features/structures-and-extension-objects.md)
+for the encoding NodeIds.
 
 ## NodeId format
 
@@ -70,7 +81,7 @@ Objects (ns=0;i=85)
     ├── DataTypes          # Scalars, arrays, matrices, analog
     ├── Methods            # 12 callable methods
     ├── Dynamic            # 13 time-varying variables
-    ├── Events             # Event emitter + custom event types
+    ├── Events             # Single emitter object, three periodic BaseEventState timers
     ├── Alarms             # 3 alarms + 2 source variables
     ├── Historical         # 4 historized variables
     ├── Structures         # Nested objects, deep nesting
@@ -90,7 +101,7 @@ Views (ns=0;i=87)
 ├── OperatorView      → Dynamic, Methods, Alarms
 ├── EngineeringView   → Everything (TestServer root)
 ├── HistoricalView    → Historical
-└── DataView          → DataTypes, Structures
+└── DataView          → DataTypes, Structures, ExtensionObjects
 ```
 
 Views are filtered perspectives of the address space — see
@@ -116,25 +127,25 @@ top-level folders:
 
 ## Node-count summary
 
-| Category                  | Count        |
-| ------------------------- | ------------ |
-| Scalar variables (RW)      | 21           |
-| Scalar variables (RO)      | 21           |
-| Array variables (RW)       | 20           |
-| Array variables (RO)       | 6            |
-| Empty arrays               | 14           |
-| Multi-dimensional matrices | 3            |
-| Analog items (with EURange) | 3           |
-| Methods                    | 12           |
-| Dynamic variables          | 13           |
-| Event types (custom)       | 3            |
-| Alarms                     | 3 + 2 source |
-| Historical variables       | 4            |
-| Structure objects          | 4 + 5 collection + 10 deep |
-| Extension objects           | 2           |
-| Access-control variables    | 50          |
-| Views                       | 4           |
-| **Total**                  | **~300**     |
+| Category                          | Count        |
+| --------------------------------- | ------------ |
+| Scalar variables (RW)             | 21           |
+| Scalar variables (RO)             | 21           |
+| Array variables (RW)              | 20           |
+| Array variables (RO)              | 6            |
+| Empty arrays                      | 14           |
+| Multi-dimensional matrices        | 3            |
+| Analog items (with EURange)       | 3            |
+| Methods                           | 12           |
+| Dynamic variables                 | 13           |
+| Event types (custom)              | **0** — the suite emits standard `BaseEventState` events from one emitter object; no custom event types are registered |
+| Alarms                            | 3 + 2 source |
+| Historical variables              | 4            |
+| Structure objects                 | 4 + 5 collection + 10 deep |
+| Extension objects                 | 2            |
+| Access-control variables          | 50           |
+| Views                             | 4            |
+| **Total custom variables/objects** | **~200**    |
 
 Plus framework nodes (`Server`, `Aliases`, `Namespaces`) in
 `ns=0` that every OPC UA server has.

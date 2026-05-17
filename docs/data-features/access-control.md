@@ -26,11 +26,17 @@ Path: `AccessControl / AccessLevels`
 
 | BrowseName          | accessLevel             | userAccessLevel | Initial | Notes                                      |
 | ------------------- | ----------------------- | --------------- | ------- | ------------------------------------------ |
-| `CurrentRead_Only`  | `CurrentRead`           | `CurrentRead`   | `100`   | Write → `Bad_NotWritable`                  |
-| `CurrentWrite_Only` | `CurrentRead+Write`     | `CurrentWrite`  | `0`     | Read → `Bad_NotReadable` (user level)      |
-| `ReadWrite`          | `CurrentRead+Write`    | `CurrentRead+Write` | `42` | Full RW                                    |
-| `HistoryRead_Only`  | `CurrentRead+HistoryRead` | same          | `55`    | History-read enabled                       |
-| `FullAccess`        | `CurrentRead+Write+HistoryRead` | same    | `77`    | Everything works                            |
+| `CurrentRead_Only`  | `CurrentRead`           | `CurrentRead`   | `42`    | Write → `Bad_NotWritable`                  |
+| `CurrentWrite_Only` | `CurrentWrite`          | `CurrentWrite`  | `0`     | Read → `Bad_NotReadable`                   |
+| `ReadWrite`         | `CurrentRead+Write`     | `CurrentRead+Write` | `100` | Full RW                                    |
+| `HistoryRead_Only`  | `CurrentRead+HistoryRead` | same          | `200`   | History-read enabled                       |
+| `FullAccess`        | `CurrentRead+Write+HistoryRead` | same    | `300`   | Everything works                            |
+
+`CurrentWrite_Only` uses only the `CurrentWrite` bit in
+**both** `accessLevel` and `userAccessLevel` — the server cannot
+read either. The "server-could-but-user-cannot" framing below
+applies to the OPC UA model in general, not to this specific
+node.
 
 ### accessLevel vs userAccessLevel
 
@@ -58,18 +64,26 @@ RW for all; role enforcement is server-side.
 
 | BrowseName          | Type      | Initial                  | Purpose                       |
 | ------------------- | --------- | ------------------------ | ----------------------------- |
-| `SecretConfig`      | String    | `"admin-secret-value"`   | Sensitive config              |
-| `SystemParameter`   | Int32     | `999`                    | System-level parameter        |
-| `CalibrationFactor` | Double    | `99.99`                  | Calibration coefficient       |
+| `SecretConfig`      | String    | `"secret-value-123"`     | Sensitive config              |
+| `SystemParameter`   | Int32     | `9999`                   | System-level parameter        |
+| `CalibrationFactor` | Double    | `1.0`                    | Calibration coefficient       |
 | `MaintenanceMode`   | Boolean   | `false`                  | Maintenance flag              |
 
 Behaviour:
 
-| Connected as | Read    | Write                       |
-| ------------ | ------- | --------------------------- |
-| `admin`      | OK      | OK                           |
-| `operator`   | OK      | depends on rolePermissions  |
-| `viewer`     | OK      | depends on rolePermissions  |
+| Connected as | Read    | Write |
+| ------------ | ------- | ----- |
+| `admin`      | OK      | OK    |
+| `operator`   | OK      | OK    |
+| `viewer`     | OK      | OK    |
+| anonymous    | OK      | OK    |
+
+Despite the folder name, the `AdminOnly` nodes do **not** carry
+role-protected write hooks in the current build — they're
+plain RW variables. Role enforcement is only wired for the
+variables under `OperatorLevel/` (see below). Treat
+`AdminOnly/` as "tagged for future hardening" rather than an
+authoritative gate.
 
 ## 3. OperatorLevel
 
@@ -78,12 +92,12 @@ Path: `AccessControl / OperatorLevel`
 Variables with **role-based write protection**. `admin` and
 `operator` can write; `viewer` cannot.
 
-| BrowseName        | Type      | Initial    | Purpose                |
-| ----------------- | --------- | ---------- | ---------------------- |
-| `Setpoint`        | Double    | `50.0`     | Process setpoint       |
-| `MotorSpeed`      | Int32     | `1500`     | Motor speed (RPM)      |
-| `ProcessEnabled`  | Boolean   | `true`     | Process enable flag    |
-| `RecipeName`      | String    | `"default"` | Active recipe name    |
+| BrowseName        | Type      | Initial     | Purpose                |
+| ----------------- | --------- | ----------- | ---------------------- |
+| `Setpoint`        | Double    | `50.0`      | Process setpoint       |
+| `MotorSpeed`      | Int32     | `1500`      | Motor speed (RPM)      |
+| `ProcessEnabled`  | Boolean   | `true`      | Process enable flag    |
+| `RecipeName`      | String    | `"Recipe_A"` | Active recipe name    |
 
 Behaviour matrix:
 
@@ -102,16 +116,19 @@ Path: `AccessControl / ViewerLevel`
 
 Read-only by design. All five roles can read; none can write.
 
-| BrowseName            | Type      | Value                  | Notes                              |
-| --------------------- | --------- | ---------------------- | ---------------------------------- |
-| `ProductionCount`     | UInt32    | `12345`                | Static                              |
-| `MachineName`         | String    | `"Machine-001"`        | Static                              |
-| `IsRunning`           | Boolean   | `true`                 | Static                              |
-| `CurrentTemperature`  | Double    | `~22.5 ± 0.5`          | Slight random noise per read       |
-| `UptimeSeconds`       | UInt32    | server uptime           | Increases continuously              |
+| BrowseName            | Type      | Value           | Notes                              |
+| --------------------- | --------- | --------------- | ---------------------------------- |
+| `ProductionCount`     | UInt32    | `12345`         | Static                             |
+| `MachineName`         | String    | `"Machine-001"` | Static                             |
+| `IsRunning`           | Boolean   | `true`          | Static                             |
+| `CurrentTemperature`  | Double    | `45.2`          | Static — no per-read noise         |
+| `UptimeSeconds`       | UInt32    | `86400`         | Static — does **not** increment    |
 
-`UptimeSeconds` and `CurrentTemperature` are good for confirming
-"read returns fresh data per call".
+All five `ViewerLevel` variables hold static values set once at
+server start. They are read-only via the access-level bits, but
+none of them are updated by a timer or by a per-read hook — use
+the variables under `Dynamic/` if you need genuinely changing
+data.
 
 ## 5. AllCombinations
 
@@ -131,16 +148,16 @@ variables**. Systematic test surface.
 
 ### Type matrix
 
-| Type     | `_RO` value      | `_RW` initial | `_WO` initial | `_HR` initial   |
-| -------- | ---------------- | ------------- | ------------- | --------------- |
-| Boolean   | `true`          | `false`       | `false`       | `true`          |
-| Int32     | `-42`           | `0`           | `0`           | `-42`           |
-| UInt32    | `42`            | `0`           | `0`           | `42`            |
-| Double    | `3.14`          | `0.0`         | `0.0`         | `3.14`          |
-| String    | `"immutable"`   | `""`          | `""`          | `"immutable"`   |
-| DateTime  | `2024-01-01`    | now           | now           | `2024-01-01`    |
-| Byte      | `128`           | `0`           | `0`           | `128`           |
-| Float     | `2.71`          | `0.0`         | `0.0`         | `2.71`          |
+| Type     | `_RO` value      | `_RW` initial | `_WO` initial | `_HR` initial      |
+| -------- | ---------------- | ------------- | ------------- | ------------------ |
+| Boolean  | `true`           | `false`       | `false`       | `true`             |
+| Int32    | `42`             | `0`           | `0`           | `100`              |
+| UInt32   | `42`             | `0`           | `0`           | `100`              |
+| Double   | `3.14`           | `0.0`         | `0.0`         | `2.71`             |
+| String   | `"readonly"`     | `"readwrite"` | `"writeonly"` | `"history"`        |
+| DateTime | `DateTime.UtcNow` at startup | same | same | same                       |
+| Byte     | `0xFF` (`255`)   | `0`           | `0`           | `0xAB` (`171`)     |
+| Float    | `1.5`            | `0.0`         | `0.0`         | `2.5`              |
 
 ### Variable list
 

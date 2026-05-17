@@ -32,8 +32,15 @@ which the suite supports and which server offers what.
 | `ECC_brainpoolP256r1`        | Current (ECC)  | ECDSA-bP256r1, ECDH-bP256r1, AES-128            |
 | `ECC_brainpoolP384r1`        | Current (ECC)  | ECDSA-bP384r1, ECDH-bP384r1, AES-256            |
 
-`ECC_curve25519` / `ECC_curve448` are **blocked** upstream — see
-[ROADMAP](https://github.com/php-opcua/uanetstandard-test-suite/blob/master/ROADMAP.md).
+`ECC_curve25519` / `ECC_curve448` are referenced in
+`src/TestServer/Program.cs`'s policy switch (so the code paths
+exist), but no shipped server enables them in
+`OPCUA_SECURITY_POLICIES`. Whether the bundled UA-.NETStandard
+version actually negotiates a working channel on these curves
+depends on the SDK build and has not been verified end-to-end
+in this repo. Treat them as "should be configurable, but not
+covered by the shipped test matrix" — verify against your
+client before relying on them.
 
 ## Modes
 

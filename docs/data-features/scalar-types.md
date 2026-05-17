@@ -18,29 +18,34 @@ Path: `TestServer / DataTypes / Scalar` (RW) and `Scalar/ReadOnly` (read-only si
 
 ## Read-write scalars
 
-| BrowseName            | Type             | Initial value                        |
-| --------------------- | ---------------- | ------------------------------------ |
-| `BooleanValue`        | Boolean          | `true`                               |
-| `SByteValue`          | SByte            | `-42`                                |
-| `ByteValue`           | Byte             | `42`                                 |
-| `Int16Value`          | Int16            | `-1000`                              |
-| `UInt16Value`         | UInt16           | `1000`                               |
-| `Int32Value`          | Int32            | `-100000`                            |
-| `UInt32Value`         | UInt32           | `100000`                             |
-| `Int64Value`          | Int64            | `-1000000`                           |
-| `UInt64Value`         | UInt64           | `1000000`                            |
-| `FloatValue`          | Float            | `3.14`                               |
-| `DoubleValue`         | Double           | `3.141592653589793`                  |
-| `StringValue`         | String           | `"Hello OPC UA"`                     |
-| `DateTimeValue`       | DateTime         | server-start time                    |
-| `GuidValue`           | Guid             | `72962B91-FA75-4AE6-8D28-B404DC7DAF63` |
-| `ByteStringValue`     | ByteString       | `"OPC UA Test Data"` (bytes)         |
-| `XmlElementValue`     | XmlElement       | `<test><value>42</value></test>`     |
-| `NodeIdValue`         | NodeId           | `ns=1;s=test-nodeid`                 |
-| `ExpandedNodeIdValue` | ExpandedNodeId   | `ns=1;i=1234`                        |
-| `StatusCodeValue`     | StatusCode       | `Good (0x00000000)`                  |
-| `QualifiedNameValue`  | QualifiedName    | `1:TestQualifiedName`                |
-| `LocalizedTextValue`  | LocalizedText    | `en: "Test Localized Text"`          |
+Values come from `src/TestServer/AddressSpace/DataTypesBuilder.cs`.
+Boundary-value tests should use your own data — the initial set
+is deliberately mild so that round-trip tests have a known
+neutral starting point.
+
+| BrowseName            | Type             | Initial value                              |
+| --------------------- | ---------------- | ------------------------------------------ |
+| `BooleanValue`        | Boolean          | `true`                                     |
+| `SByteValue`          | SByte            | `-42`                                      |
+| `ByteValue`           | Byte             | `42`                                       |
+| `Int16Value`          | Int16            | `-1000`                                    |
+| `UInt16Value`         | UInt16           | `1000`                                     |
+| `Int32Value`          | Int32            | `-100000`                                  |
+| `UInt32Value`         | UInt32           | `100000`                                   |
+| `Int64Value`          | Int64            | `-1000000`                                 |
+| `UInt64Value`         | UInt64           | `1000000`                                  |
+| `FloatValue`          | Float            | `3.14`                                     |
+| `DoubleValue`         | Double           | `2.71828`                                  |
+| `StringValue`         | String           | `"Hello OPC UA"`                           |
+| `DateTimeValue`       | DateTime         | `DateTime.UtcNow` captured at server start |
+| `GuidValue`           | Guid             | Fresh `Guid.NewGuid()` per server start (non-deterministic) |
+| `ByteStringValue`     | ByteString       | `[0x01, 0x02, 0x03, 0x04]`                 |
+| `XmlElementValue`     | XmlElement       | `<test>Hello OPC UA</test>`                |
+| `NodeIdValue`         | NodeId           | `ns=0;i=1234` (numeric, server namespace)  |
+| `ExpandedNodeIdValue` | ExpandedNodeId   | `ns=0;i=5678`                              |
+| `StatusCodeValue`     | StatusCode       | `Good` (`0x00000000`)                      |
+| `QualifiedNameValue`  | QualifiedName    | `1:TestName`                               |
+| `LocalizedTextValue`  | LocalizedText    | `en: "Test Text"`                          |
 
 All RW: write the new value, read it back, expect equality.
 
@@ -51,29 +56,29 @@ Path: `TestServer / DataTypes / ReadOnly`
 Same 21 types as above, suffixed `_RO`. `accessLevel =
 CurrentRead`. Writes return `Bad_NotWritable`.
 
-| BrowseName              | Type            | Value                          |
-| ----------------------- | --------------- | ------------------------------ |
-| `Boolean_RO`            | Boolean         | `true`                         |
-| `SByte_RO`              | SByte           | `-42`                          |
-| `Byte_RO`               | Byte            | `42`                           |
-| `Int16_RO`              | Int16           | `-1000`                        |
-| `UInt16_RO`             | UInt16          | `1000`                         |
-| `Int32_RO`              | Int32           | `-100000`                      |
-| `UInt32_RO`             | UInt32          | `100000`                       |
-| `Int64_RO`              | Int64           | `-1000000`                     |
-| `UInt64_RO`             | UInt64          | `1000000`                      |
-| `Float_RO`              | Float           | `3.14`                         |
-| `Double_RO`             | Double          | `3.141592653589793`            |
-| `String_RO`             | String          | `"Read Only String"`           |
-| `DateTime_RO`           | DateTime        | `2024-01-01T00:00:00Z`          |
-| `Guid_RO`               | Guid            | `72962B91-FA75-4AE6-8D28-B404DC7DAF63` |
-| `ByteString_RO`         | ByteString      | `"ReadOnly"` (bytes)           |
-| `XmlElement_RO`         | XmlElement      | `<readonly/>`                  |
-| `NodeId_RO`             | NodeId          | `ns=1;s=readonly-nodeid`       |
-| `ExpandedNodeId_RO`     | ExpandedNodeId  | `ns=1;i=9999`                  |
-| `StatusCode_RO`         | StatusCode      | `Good`                         |
-| `QualifiedName_RO`      | QualifiedName   | `1:ReadOnly`                   |
-| `LocalizedText_RO`      | LocalizedText    | `en: "Read Only"`              |
+| BrowseName              | Type            | Value                                            |
+| ----------------------- | --------------- | ------------------------------------------------ |
+| `Boolean_RO`            | Boolean         | `true`                                           |
+| `SByte_RO`              | SByte           | `-10`                                            |
+| `Byte_RO`               | Byte            | `10`                                             |
+| `Int16_RO`              | Int16           | `-500`                                           |
+| `UInt16_RO`             | UInt16          | `500`                                            |
+| `Int32_RO`              | Int32           | `-50000`                                         |
+| `UInt32_RO`             | UInt32          | `50000`                                          |
+| `Int64_RO`              | Int64           | `-500000`                                        |
+| `UInt64_RO`             | UInt64          | `500000`                                         |
+| `Float_RO`              | Float           | `1.618`                                          |
+| `Double_RO`             | Double          | `1.41421`                                        |
+| `String_RO`             | String          | `"ReadOnly String"`                              |
+| `DateTime_RO`           | DateTime        | `DateTime.UtcNow` captured at server start       |
+| `Guid_RO`               | Guid            | `12345678-1234-1234-1234-123456789abc` (constant)|
+| `ByteString_RO`         | ByteString      | `[0xDE, 0xAD, 0xBE, 0xEF]`                       |
+| `XmlElement_RO`         | XmlElement      | `default(XmlElement)` — server returns the value as `null` |
+| `NodeId_RO`             | NodeId          | `ns=0;i=9999`                                    |
+| `ExpandedNodeId_RO`     | ExpandedNodeId  | `ns=0;i=8888`                                    |
+| `StatusCode_RO`         | StatusCode      | `Good`                                           |
+| `QualifiedName_RO`      | QualifiedName   | `1:ReadOnly`                                     |
+| `LocalizedText_RO`      | LocalizedText   | `en: "ReadOnly Text"`                            |
 
 ## Test patterns
 

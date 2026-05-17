@@ -122,15 +122,26 @@ NodeIds in `ns=1` follow these conventions:
 
 These are **stable** across restarts.
 
-## Extension-object types — `ns=3`
+## Extension-object types — custom-types namespace
 
-| TypeId             | Type name           |
-| ------------------ | ------------------- |
-| `ns=3;i=3010`      | `TestPointXYZ`      |
-| `ns=3;i=3011`      | `TestRangeStruct`   |
+The two custom structures are registered in a third namespace
+(`urn:opcua:test-server:custom-types`). The namespace index is
+assigned at runtime by the UA-.NETStandard core; it has
+historically resolved to `ns=3`, but **clients must verify** by
+reading `Server.NamespaceArray` rather than hardcoding the
+index. The TypeId and Binary-encoding NodeId are different
+numeric ids for each structure:
 
-Read `PointValue` / `RangeValue` → check `typeId` to identify
-which struct you got.
+| Type name         | DataType TypeId   | `Default Binary` encoding NodeId |
+| ----------------- | ----------------- | -------------------------------- |
+| `TestPointXYZ`    | `ns=<ct>;i=3000`  | `ns=<ct>;i=3010`                 |
+| `TestRangeStruct` | `ns=<ct>;i=3001`  | `ns=<ct>;i=3011`                 |
+
+Where `<ct>` is the resolved index of `urn:opcua:test-server:custom-types`.
+The `i=3010` / `i=3011` ids are the encoding nodes that appear
+on the `ExtensionObject` body; reading `PointValue` / `RangeValue`
+returns an `ExtensionObject` whose `typeId` is the encoding
+NodeId (`3010` or `3011`), not the DataType id.
 
 ## Standard namespace shortcuts
 

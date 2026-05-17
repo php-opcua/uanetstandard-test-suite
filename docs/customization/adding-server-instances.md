@@ -33,7 +33,9 @@ opcua-my-scenario:
   environment:
     OPCUA_PORT:              "4852"
     OPCUA_SERVER_NAME:       "MyScenarioServer"
-    OPCUA_HOSTNAME:          "0.0.0.0"
+    # OPCUA_HOSTNAME is read into config.Hostname but never used; the
+    # listener is hardcoded to 0.0.0.0 in src/TestServer/Program.cs.
+    # Omit it unless you also patch BaseAddresses construction.
     OPCUA_RESOURCE_PATH:     "/UA/TestServer"
     OPCUA_SECURITY_POLICIES: "Basic256Sha256"
     OPCUA_SECURITY_MODES:    "SignAndEncrypt"
@@ -176,18 +178,22 @@ Then your workflow:
 
 ## Adding it to docker-compose.ci.yml
 
-The CI override needs a matching entry so the ci-mode (no
-auto-restart, no healthcheck) applies:
+The shipped CI override only switches `restart` to `"no"` per
+service. To match the rest of the file, add:
 
-<!-- @code-block language="text" label="docker-compose.ci.yml" -->
-```text
+<!-- @code-block language="yaml" label="docker-compose.ci.yml" -->
+```yaml
 opcua-my-scenario:
-  image: ${OPCUA_SERVER_IMAGE}
   restart: "no"
-  healthcheck:
-    disable: true
 ```
 <!-- @endcode-block -->
+
+Do **not** add an `image:` field — the shipped configuration
+builds locally on every `docker compose up --build`, and there is
+no `OPCUA_SERVER_IMAGE` variable. Only add `healthcheck:
+disable: true` if you also declared a healthcheck on the
+service in the base `docker-compose.yml` (the only service that
+ships a healthcheck is `opcua-no-security`).
 
 ## Verifying
 

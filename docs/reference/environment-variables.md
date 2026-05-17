@@ -20,7 +20,7 @@ image, shaped by env, becomes any of the 12 services.
 | Variable                | Default                  | Effect                                      |
 | ----------------------- | ------------------------ | ------------------------------------------- |
 | `OPCUA_PORT`            | `4840`                   | TCP port to bind                            |
-| `OPCUA_HOSTNAME`        | `0.0.0.0`                | Bind address                                |
+| `OPCUA_HOSTNAME`        | `0.0.0.0`                | Read into `config.Hostname` but **not used** for `BaseAddresses`; the listener is hardcoded to `opc.tcp://0.0.0.0:{Port}{ResourcePath}` (see `src/TestServer/Program.cs`). Setting this has no effect. |
 | `OPCUA_RESOURCE_PATH`   | `/UA/TestServer`         | URL resource path                           |
 | `OPCUA_SERVER_NAME`     | `OPCUATestServer`        | Display name in `ServerStatus`               |
 
@@ -51,12 +51,15 @@ image, shaped by env, becomes any of the 12 services.
 | Variable                       | Default     | Effect                                          |
 | ------------------------------ | ----------- | ----------------------------------------------- |
 | `OPCUA_MAX_SESSIONS`           | `100`       | Max concurrent sessions                         |
-| `OPCUA_MAX_NODES_PER_READ`     | `0` (∞)     | Max NodeIds in one Read request                 |
-| `OPCUA_MAX_NODES_PER_WRITE`    | `0` (∞)     | Max NodeIds in one Write request                |
-| `OPCUA_MAX_NODES_PER_BROWSE`   | `0` (∞)     | Max NodeIds in one Browse request               |
+| `OPCUA_MAX_SUBSCRIPTIONS`      | `100`       | Max concurrent subscriptions per session        |
+| `OPCUA_MIN_PUBLISHING_INTERVAL`| `100`       | Minimum publishing interval (ms)                |
+| `OPCUA_MAX_NODES_PER_READ`     | `1000`      | Max NodeIds in one Read request                 |
+| `OPCUA_MAX_NODES_PER_WRITE`    | `1000`      | Max NodeIds in one Write request                |
+| `OPCUA_MAX_NODES_PER_BROWSE`   | `1000`      | Max NodeIds in one Browse request               |
 
-`opcua-no-security` sets `MaxNodesPerRead=5` and
-`MaxNodesPerWrite=5` to exercise the limit error path.
+`opcua-no-security` overrides `MaxNodesPerRead=5` and
+`MaxNodesPerWrite=5` (via compose env) to exercise the limit
+error path. All other services keep the `1000` default.
 
 ## Feature toggles (address-space)
 
@@ -75,16 +78,31 @@ service.
 
 ## Security Key Service (when enabled)
 
-| Variable                          | Default                                              |
+"Default" below is the value baked into `ServerConfig.cs` — what
+you get if `OPCUA_ENABLE_SKS=true` is set on a server that does
+not otherwise override these. The shipped `opcua-sks` service in
+`docker-compose.yml` overrides `OPCUA_SKS_TOKEN_ID`,
+`OPCUA_SKS_SIGNING_KEY_HEX` (`02` × 32… actually `01` × 32 on the
+wire — see compose for the exact hex) and `OPCUA_SKS_ENCRYPTING_KEY_HEX`
+with its own values; the entries below are the **code defaults**,
+not what `opcua-sks` actually serves.
+
+| Variable                          | Default (in `ServerConfig.cs`)                       |
 | --------------------------------- | ---------------------------------------------------- |
 | `OPCUA_SKS_GROUP_ID`              | `test-group`                                         |
 | `OPCUA_SKS_POLICY_URI`            | `http://opcfoundation.org/UA/SecurityPolicy#PubSub-Aes256-CTR` |
-| `OPCUA_SKS_TOKEN_ID`              | `7`                                                  |
-| `OPCUA_SKS_SIGNING_KEY_HEX`       | `01` × 32                                            |
-| `OPCUA_SKS_ENCRYPTING_KEY_HEX`    | `02` × 32                                            |
+| `OPCUA_SKS_TOKEN_ID`              | `1`                                                  |
+| `OPCUA_SKS_SIGNING_KEY_HEX`       | 62 zeros + `01` (32 bytes)                           |
+| `OPCUA_SKS_ENCRYPTING_KEY_HEX`    | 62 zeros + `02` (32 bytes)                           |
 | `OPCUA_SKS_KEY_NONCE_HEX`         | `03030303`                                           |
 | `OPCUA_SKS_TIME_TO_NEXT_KEY_MS`   | `300000`                                             |
 | `OPCUA_SKS_KEY_LIFETIME_MS`       | `600000`                                             |
+
+For reference, `docker-compose.yml`'s `opcua-sks` block sets
+`OPCUA_SKS_TOKEN_ID=7`, `OPCUA_SKS_SIGNING_KEY_HEX=01…01` (32
+bytes of `0x01`) and `OPCUA_SKS_ENCRYPTING_KEY_HEX=02…02` (32
+bytes of `0x02`). Those are the values clients will see on port
+4851.
 
 ## PubSub publisher (when running TestPublisher image)
 
@@ -103,13 +121,13 @@ service.
 
 ## Compose-only
 
-These shape the **compose** invocation but aren't read by the
-server image:
-
-| Variable             | Default         | Effect                              |
-| -------------------- | --------------- | ----------------------------------- |
-| `OPCUA_SERVER_IMAGE` | (build locally) | Image to use in `docker-compose.ci.yml` |
-| `FORCE_REGEN`        | (unset)         | Forces `certs-generator` to re-create certs |
+The shipped compose files do not depend on any extra environment
+variables — `docker-compose.yml` always builds the image locally
+(`build: .`), and `docker-compose.ci.yml` only sets
+`restart: "no"` on each service. To force certificate regeneration
+remove the `certs/` directory before bringing the stack up
+(`scripts/generate-certs.sh` skips when `ca/ca-cert.pem`,
+`server/cert.pem` and `client/cert.pem` all exist).
 
 ## A complete `.env` for the suite
 
@@ -120,7 +138,6 @@ override, you can centralise variables:
 <!-- @code-block language="bash" label=".env.suite (custom)" -->
 ```bash
 # Common
-OPCUA_HOSTNAME=0.0.0.0
 OPCUA_RESOURCE_PATH=/UA/TestServer
 
 # Feature toggles (all on)
@@ -131,10 +148,11 @@ OPCUA_ENABLE_DYNAMIC=true
 OPCUA_ENABLE_STRUCTURES=true
 OPCUA_ENABLE_VIEWS=true
 
-# Op limits
+# Op limits (defaults match ServerConfig.cs)
 OPCUA_MAX_SESSIONS=100
-OPCUA_MAX_NODES_PER_READ=0
-OPCUA_MAX_NODES_PER_WRITE=0
+OPCUA_MAX_NODES_PER_READ=1000
+OPCUA_MAX_NODES_PER_WRITE=1000
+OPCUA_MAX_NODES_PER_BROWSE=1000
 ```
 <!-- @endcode-block -->
 

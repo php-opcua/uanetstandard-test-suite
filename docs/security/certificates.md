@@ -90,7 +90,7 @@ chain only when present is the cleanest test pattern — see
 Subject:           CN=OPC UA Test Client
 Key:               RSA 2048-bit
 Signed by:         OPC UA Test CA
-Validity:          5 years
+Validity:          10 years from generation (`-days 3650`)
 Subject Alt Names: URI:urn:opcua:testclient
 ```
 
@@ -106,7 +106,7 @@ because:
 ## Self-signed cert
 
 ```text
-Subject:    CN=OPC UA Self-Signed Client
+Subject:    CN=Self Signed Client
 Signed by:  itself
 Use:        Trigger Bad_CertificateUntrusted
 ```
@@ -123,15 +123,26 @@ doesn't recognise it. Use it in cert-rejection tests:
 ## Expired cert
 
 ```text
-Subject:    CN=OPC UA Expired Client
+Subject:    CN=Expired Client
 Signed by:  OPC UA Test CA
-Validity:   1 day, backdated by several days
-Use:        Trigger Bad_CertificateTimeInvalid
+Validity:   1 day from generation (`-days 1`, NOT backdated)
+Use:        Will trigger Bad_CertificateTimeInvalid once the day elapses
 ```
 
-Has a valid issuer (the CA) but the time window has elapsed.
-Use to test expiry validation in your client (or the server, if
-your library handles it server-side).
+The cert is signed for a 1-day validity window starting at the
+moment `scripts/generate-certs.sh` runs. There is no backdating
+in the script — for the first ~24 hours after running
+`docker compose up -d` (or after deleting `certs/` and bringing
+the stack back up) this cert is **still valid**. Tests that
+assert `Bad_CertificateTimeInvalid` will see `Good` if executed
+in that initial window.
+
+If you need a guaranteed-expired cert on demand, regenerate
+the cert tree against a system clock that is set far in the
+future (`certs-generator` re-runs only when the `ca/`, `server/`
+and `client/` PEM files are all missing — see "Regenerating"
+below), or modify the script's `-days 1` to a negative or
+already-elapsed value.
 
 ## Filename formats
 
@@ -183,16 +194,13 @@ docker compose up -d
 ```
 <!-- @endcode-block -->
 
-To regenerate without bringing the stack down:
-
-<!-- @code-block language="bash" label="terminal" -->
-```bash
-FORCE_REGEN=1 docker compose up -d
-```
-<!-- @endcode-block -->
-
-`FORCE_REGEN=1` makes the cert-generator wipe and re-create
-everything, then exit.
+There is no `FORCE_REGEN` knob — `scripts/generate-certs.sh`
+checks for the presence of `ca/ca-cert.pem`, `server/cert.pem`
+and `client/cert.pem` and exits early ("Certificates already
+exist, skipping generation.") when all three are present. The
+**only** supported way to regenerate is to delete the relevant
+files (or the whole `certs/` directory) before bringing the
+stack up.
 
 ## Generating locally (outside Docker)
 

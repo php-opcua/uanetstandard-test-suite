@@ -15,10 +15,11 @@ next: { label: 'Classic RSA and ECC servers', href: './classic-rsa-and-ecc.md' }
 
 The suite is **one C# codebase**, instantiated 11 times via
 `docker-compose.yml` with different environment variables. Each
-classic server exposes the same ~300-node address space — only
-the security wrapping and the enabled authentication methods
-differ. Two services (the PubSub publisher and its relay) run
-from a second codebase.
+classic server exposes the same ~200-node application address
+space — only the security wrapping and the enabled
+authentication methods differ. Two additional services (the
+PubSub publisher and its UDP relay sidecar) run from a second
+codebase.
 
 ## The full map
 
@@ -81,10 +82,19 @@ All 10 classic servers share:
 | Application URI          | `urn:opcua:testserver:nodes`                       |
 | Hostname (in cert SAN)   | localhost, plus every Docker service name          |
 | Default max sessions     | 100                                                |
-| Default max nodes/read   | 0 (unlimited) — except `opcua-no-security` (5)     |
-| Default max nodes/write  | 0 (unlimited) — except `opcua-no-security` (5)     |
-| Address space            | ~300 nodes                                         |
-| Health probe             | `dotnet TestServer.dll --health`                   |
+| Default max nodes/read   | 1000 — except `opcua-no-security` (5)              |
+| Default max nodes/write  | 1000 — except `opcua-no-security` (5)              |
+| Address space            | ~200 nodes (sum of all builders)                   |
+| Health probe binary      | `dotnet TestServer.dll --health` (returns exit 0)  |
+
+The `--health` binary is implemented in `src/TestServer/Program.cs`
+and is available in every container. However, only
+`opcua-no-security` actually wires it into a Docker `healthcheck`
+block in `docker-compose.yml`; the other 9 classic services do
+not declare a healthcheck, so `docker compose ps` reports their
+state as just `running` rather than `healthy`. The probe can
+still be invoked manually (`docker compose exec <service> dotnet
+TestServer.dll --health`).
 
 ## Why the address space is identical
 
@@ -102,7 +112,7 @@ variables:
 | Variable                    | Disables                                  |
 | --------------------------- | ----------------------------------------- |
 | `OPCUA_ENABLE_HISTORICAL=false` | History recording + nodes                |
-| `OPCUA_ENABLE_EVENTS=false`     | Custom event types + alarms              |
+| `OPCUA_ENABLE_EVENTS=false`     | Periodic event timers + alarms folder    |
 | `OPCUA_ENABLE_METHODS=false`    | Methods folder                            |
 | `OPCUA_ENABLE_DYNAMIC=false`    | Dynamic variables                         |
 | `OPCUA_ENABLE_STRUCTURES=false` | Structures folder                         |

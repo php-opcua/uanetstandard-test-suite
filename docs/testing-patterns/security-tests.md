@@ -163,14 +163,14 @@ Repeat for `operator/operator123`, `viewer/viewer123`, `test/test`.
 
 ```text
 connect(..., user="admin", pass="wrongpassword")
-→ Bad_IdentityTokenRejected
+→ Bad_UserAccessDenied
 ```
 
 ### Unknown user
 
 ```text
 connect(..., user="nonexistent", pass="x")
-→ Bad_IdentityTokenRejected
+→ Bad_UserAccessDenied
 ```
 
 ### Anonymous on userpass
@@ -179,6 +179,13 @@ connect(..., user="nonexistent", pass="x")
 connect("opc.tcp://localhost:4841", ..., identity=Anonymous)
 → Bad_IdentityTokenRejected
 ```
+
+Note the distinction: invalid username/password combinations
+return `Bad_UserAccessDenied` (the token type was accepted but
+the credentials failed). `Bad_IdentityTokenRejected` is only
+returned when the token type itself is not allowed on the
+endpoint — Anonymous on a server with `AllowAnonymous=false`,
+or Certificate on a server with `AuthCertificate=false`.
 
 ### Role-based write rejection
 
@@ -254,11 +261,19 @@ Pair this with fingerprint pinning for a working setup.
 ```text
 client.connect("opc.tcp://localhost:4844")  # discovery, no resource path
 client.call_find_servers()
-→ list of registered servers (the other suite servers)
+→ list containing (at most) the discovery server itself
 ```
 
-The classic test servers register with the discovery server on
-start. After ~30 s, `FindServers` should return all of them.
+None of the classic test servers in `docker-compose.yml` set
+`OPCUA_DISCOVERY_URL`, and `TestServerApp` does not call
+`RegisterServer` / `RegisterServer2` against any discovery
+endpoint. So `FindServers` against port 4844 will **not** return
+the other suite servers — it returns only whatever the
+discovery server has self-registered (effectively itself, or an
+empty list, depending on the UA-.NETStandard stack version).
+The discovery endpoint is provided primarily as a target for
+testing the `FindServers` and `GetEndpoints` calls themselves,
+not as a working server registry for the rest of the suite.
 
 ### GetEndpoints on discovery server
 
@@ -275,7 +290,7 @@ GetEndpoints("opc.tcp://localhost:4844")
 | Connect anonymous                  | 4840                    | Good                              |
 | Connect anonymous on userpass      | 4841                    | `Bad_IdentityTokenRejected`        |
 | Valid creds                        | 4841                    | Good                              |
-| Wrong password                     | 4841                    | `Bad_IdentityTokenRejected`        |
+| Wrong password                     | 4841                    | `Bad_UserAccessDenied`             |
 | Trusted client cert                | 4842                    | Good                              |
 | Self-signed cert                   | 4842                    | `Bad_CertificateUntrusted`         |
 | Expired cert                       | 4842                    | `Bad_CertificateTimeInvalid`       |

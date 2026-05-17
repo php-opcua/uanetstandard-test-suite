@@ -59,11 +59,11 @@ Subscribers don't know the relay exists — they listen on
 
 Every NetworkMessage carries one DataSet with three fields:
 
-| Field       | Type      | Value                                  |
-| ----------- | --------- | -------------------------------------- |
-| `counter`   | UInt32    | Monotonic counter, starts at 0         |
-| `timestamp` | DateTime  | UTC publish time                       |
-| `value`     | Double    | `sin(counter × π / 20)` (range `[-1, 1]`) |
+| Field       | Type      | Value                                                                 |
+| ----------- | --------- | --------------------------------------------------------------------- |
+| `counter`   | UInt32    | Monotonic counter. Internal state starts at `0`, but the simulator increments before publishing — the **first wire value is `1`**, the second is `2`, and so on. |
+| `timestamp` | DateTime  | UTC publish time                                                      |
+| `value`     | Double    | `sin(counter × π / 20)` (range `[-1, 1]`)                             |
 
 ## NetworkMessage headers
 
@@ -110,22 +110,32 @@ PublisherId=100, WriterGroupId=1, DataSetWriterId=1.
 
 ### Counter increments
 
-Receive 10 messages over ~5 seconds. The `counter` field should
-be strictly increasing by 1 per message.
+Receive 10 messages over ~5 seconds. The `counter` field is
+strictly increasing, but **not necessarily by 1 per message**.
+The simulator increments `_counter` every `OPCUA_TICK_INTERVAL_MS`
+(default 250 ms) but the publisher emits a `NetworkMessage` only
+every `OPCUA_PUBLISH_INTERVAL_MS` (default 500 ms). With the
+defaults you should see `counter` advance by `2` between
+consecutive frames. To get a strict +1 step, set both intervals
+to the same value (e.g. `OPCUA_TICK_INTERVAL_MS=500`).
 
-If you miss a message (UDP isn't reliable), `counter` jumps.
-That's by design — UDP losses are part of the test surface.
+If you miss a message (UDP isn't reliable), `counter` jumps by
+more than the expected step. That's by design — UDP losses are
+part of the test surface.
 
 ### Value sequence
 
 The `value` field follows `sin(counter × π / 20)`. So:
 
-| `counter` | `value`       |
-| --------- | ------------- |
-| 0         | `0.0`         |
-| 5         | `sin(π/4) ≈ 0.7071` |
-| 10        | `sin(π/2) = 1.0` |
-| 20        | `sin(π) ≈ 0`   |
+| `counter` | `value`              |
+| --------- | -------------------- |
+| 1         | `sin(π/20) ≈ 0.1564` |
+| 5         | `sin(π/4) ≈ 0.7071`  |
+| 10        | `sin(π/2) = 1.0`     |
+| 20        | `sin(π) ≈ 0`         |
+
+(`counter` is never `0` on the wire — see the note in the
+DataSet shape table above.)
 
 Verify the formula holds for any received message.
 
@@ -182,8 +192,11 @@ SequenceNumber: 0, 1, 2, 3, ...
 ```
 
 Subscribers verify the sequence is contiguous (no skips) to
-detect UDP drops. UDP packet loss in normal conditions is
-typically 0-0.1%; in stressed CI environments slightly higher.
+detect UDP drops. UDP packet loss rates depend heavily on the
+host and network: on a quiet loopback it is normally
+near-zero, but a busy CI host or a Docker Desktop VM can drop
+several percent. Treat any observed rate as environmental
+rather than a guaranteed bound.
 
 ## Notes
 

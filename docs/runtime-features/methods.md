@@ -74,14 +74,19 @@ tests.
 
 ### GenerateEvent
 
-Raises a `BaseEventType` event on the server object.
+A no-op stub. The method is registered in the address space and
+will be called successfully, but the handler **only writes a
+console line on the server** (`Console.WriteLine("GenerateEvent
+called: …")`) — it does not call `ReportEvent` or otherwise
+publish an OPC UA event. Subscribers will not see anything.
 
-| Direction | Name       | Type     | Notes                          |
-| --------- | ---------- | -------- | ------------------------------ |
-| Input     | `message`  | String   | Becomes the event's `Message`  |
-| Input     | `severity` | UInt16   | `0`–`1000`                     |
+| Direction | Name       | Type     | Notes                                          |
+| --------- | ---------- | -------- | ---------------------------------------------- |
+| Input     | `message`  | String   | Echoed to the server's stdout                  |
+| Input     | `severity` | UInt16   | Echoed to the server's stdout                  |
 
-No outputs. The event arrives asynchronously to event subscribers.
+No outputs. Treat this method as a placeholder for future event
+generation work — do not rely on it to trigger event tests today.
 
 ### LongRunning
 
@@ -123,7 +128,13 @@ large arrays.
 | Input     | `cols`     | UInt32   | Column count                       |
 | Output    | `result`   | Double[] | Transposed (flat, row-major)        |
 
-Returns `Bad_InvalidArgument` if `matrix.length != rows * cols`.
+The handler does not validate `matrix.Length == rows * cols`.
+With a mismatched length the indexing `matrix[r * cols + c]`
+goes out of bounds and an `IndexOutOfRangeException` is thrown;
+the generic method wrapper in `TestNodeManager.CreateMethod`
+catches every exception and returns the status code
+`Bad_InternalError`. Tests that expect `Bad_InvalidArgument` on
+shape mismatch will see `Bad_InternalError` instead.
 
 Example:
 
@@ -149,16 +160,31 @@ Tests multiple typed outputs in one call.
 
 ## Discovering method signatures
 
-Each method has two property nodes:
+Each method exposes the standard `InputArguments` /
+`OutputArguments` property nodes — but **only when that side has
+at least one argument**. The wrapper in `TestNodeManager.CreateMethod`
+skips an empty side rather than creating an empty array property.
+Concretely:
 
-```text
-TestServer/Methods/Add/InputArguments
-TestServer/Methods/Add/OutputArguments
-```
+| Method            | Has `InputArguments`? | Has `OutputArguments`? |
+| ----------------- | --------------------- | ---------------------- |
+| `Add`             | Yes                   | Yes                    |
+| `Multiply`        | Yes                   | Yes                    |
+| `Concatenate`     | Yes                   | Yes                    |
+| `Reverse`         | Yes                   | Yes                    |
+| `GetServerTime`   | No                    | Yes                    |
+| `Echo`            | Yes                   | Yes                    |
+| `GenerateEvent`   | Yes                   | No                     |
+| `LongRunning`     | Yes                   | Yes                    |
+| `Failing`         | No                    | No                     |
+| `ArraySum`        | Yes                   | Yes                    |
+| `MatrixTranspose` | Yes                   | Yes                    |
+| `MultiOutput`     | No                    | Yes                    |
 
-Reading them returns an array of `Argument` records with
-`Name`, `DataType`, `ValueRank`, `Description`. Use these for
-type-aware automatic argument coercion.
+When present, each property returns an array of `Argument`
+records with `Name`, `DataType`, `ValueRank`, `Description`. The
+NodeId is `TestServer/Methods/<MethodName>/InputArguments` (or
+`/OutputArguments`) — string-based, in the `ns=1` namespace.
 
 ## Test checklist
 
@@ -168,14 +194,14 @@ type-aware automatic argument coercion.
 - [ ] `Reverse("abcde")` → `"edcba"`
 - [ ] `GetServerTime()` → DateTime close to now
 - [ ] `Echo(value)` for various types — round-trip identity
-- [ ] `GenerateEvent("test", 500)` → event received on subscription
+- [ ] `GenerateEvent("test", 500)` → returns Good but **no event is emitted** (no-op stub)
 - [ ] `LongRunning(2000)` → `true` after ~2 seconds
 - [ ] `LongRunning(60000)` → still returns; duration capped to 30 s
 - [ ] `Failing()` → `Bad_InternalError` in the call result
 - [ ] `ArraySum([1.0, 2.0, 3.0])` → `6.0`
 - [ ] `ArraySum([])` → `0.0`
 - [ ] `MatrixTranspose([1,2,3,4], 2, 2)` → `[1,3,2,4]`
-- [ ] `MatrixTranspose([1,2,3], 2, 2)` → `Bad_InvalidArgument`
+- [ ] `MatrixTranspose([1,2,3], 2, 2)` → `Bad_InternalError` (no shape validation; out-of-range index is caught and reported as `Bad_InternalError`)
 - [ ] `MultiOutput()` → `(42, "hello", true)`
 
 ## Method-call mechanics

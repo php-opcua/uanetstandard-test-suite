@@ -60,9 +60,11 @@ For the configured group (`OPCUA_SKS_GROUP_ID`, default
 | `timeToNextKey`   | 300 000 ms (5 minutes)                                |
 | `keyLifetime`     | 600 000 ms (10 minutes)                               |
 
-`requestedKeyCount` is honored: with `requestedKeyCount=3`,
-returns three identical 68-byte ByteStrings (in this test
-implementation the same key repeats — real SKS rotate them).
+`requestedKeyCount` is honored and **capped to 8**: the server
+returns `max(1, min(requestedKeyCount, 8))` byte strings. With
+`requestedKeyCount=3` you get three identical 68-byte ByteStrings;
+with `requestedKeyCount=100` you still only get 8. In this test
+implementation the same key repeats — real SKS rotate them.
 
 For unknown `securityGroupId`, the method returns `Bad_NotFound`.
 

@@ -40,16 +40,27 @@ address space.
 
 ### How tests use it
 
-The classic test servers **register** with this discovery server
-on start (via the discovery URL `opc.tcp://opcua-discovery:4844`
-on the compose network).
+None of the classic test servers in `docker-compose.yml` set
+`OPCUA_DISCOVERY_URL`, and `TestServerApp` does not call
+`RegisterServer` / `RegisterServer2` against any discovery
+endpoint. So the discovery server **does not** maintain a
+registry of the other suite services — `FindServers()` returns
+only what the discovery server has registered for itself
+(typically a single entry describing the discovery endpoint).
+
+Treat `opcua-discovery` as a target for exercising the
+`FindServers` and `GetEndpoints` calls themselves (wire shape,
+error handling, security policy selection) — not as a working
+registry for the rest of the suite.
 
 A discovery test typically:
 
 1. Connects to `opc.tcp://localhost:4844` anonymously.
-2. Calls `FindServers()` with no filter.
-3. Asserts the result includes the expected registered servers.
-4. Optionally filters by `serverUri` or `serverCapabilities`.
+2. Calls `GetEndpoints("opc.tcp://localhost:4844")`.
+3. Asserts the response carries `None/None` and
+   `Basic256Sha256/SignAndEncrypt` endpoints.
+4. Calls `FindServers()` with no filter — asserts the response
+   shape and the presence of the discovery server's own entry.
 
 Note the **lack of resource path** — discovery endpoints are
 served at the bare URL, no `/UA/TestServer` suffix.
@@ -135,11 +146,11 @@ A UA-.NETStandard PubSub publisher. Emits a deterministic
 
 ### DataSet shape
 
-| Field       | Type     | Value                                  |
-| ----------- | -------- | -------------------------------------- |
-| `counter`   | UInt32   | Monotonic counter, starts at 0         |
-| `timestamp` | DateTime | UTC publish time                       |
-| `value`     | Double   | `sin(counter × π / 20)`                |
+| Field       | Type     | Value                                                       |
+| ----------- | -------- | ----------------------------------------------------------- |
+| `counter`   | UInt32   | Monotonic counter. Internal `_counter` initial is `0` but it is incremented before the first publish, so the **first wire value is `1`**. |
+| `timestamp` | DateTime | UTC publish time                                            |
+| `value`     | Double   | `sin(counter × π / 20)`                                     |
 
 ### Headers
 

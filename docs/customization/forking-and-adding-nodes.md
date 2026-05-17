@@ -42,171 +42,189 @@ src/TestServer/
     └── SecurityKeyServiceBuilder.cs  # SKS (opt-in)
 ```
 
-Every builder follows the same shape:
+Every builder follows roughly this shape (compare with the
+existing builders in the repo — exact signatures vary):
 
-```text
+```csharp
 class FooBuilder {
-    FooBuilder(IServerInternal server, ushort namespaceIndex);
-    FolderState Build(FolderState rootFolder, ServerSystemContext context);
-    void Stop();   // dispose timers
+    // Constructor: pass the TestNodeManager (which exposes the helpers
+    // CreateFolder / CreateVariable / CreateVariableUntyped /
+    // CreateMethod and the NamespaceIndex), the root folder, and the
+    // ISystemContext.
+    public FooBuilder(TestNodeManager mgr, FolderState root, ISystemContext context);
+
+    // Builders without timers expose a parameterless Build():
+    public void Build();
+
+    // Builders that drive timers take the manager's timer list so it
+    // can dispose them on shutdown:
+    public void Build(List<IDisposable> timers);
 }
 ```
+
+There is no `Stop()` method on builders today. Timers added to
+`TestNodeManager._timers` (via `Build(timers)`) are disposed in
+`TestNodeManager.Dispose(bool)`.
 
 ## Adding a single variable
 
-The pattern any builder uses:
+The simplest pattern uses the helper that every existing builder
+calls — `TestNodeManager.CreateVariable<T>(...)`:
 
-<!-- @code-block language="text" label="adding a variable" -->
-```text
-using Opc.Ua;
-
-// inside a builder, given a parent folder:
-var variable = new BaseDataVariableState<double>(parentFolder)
-{
-    NodeId       = new NodeId("MyVariable", NamespaceIndex),
-    BrowseName   = new QualifiedName("MyVariable", NamespaceIndex),
-    DisplayName  = "MyVariable",
-    DataType     = DataTypeIds.Double,
-    ValueRank    = ValueRanks.Scalar,
-    AccessLevel  = AccessLevels.CurrentReadOrWrite,
-    UserAccessLevel = AccessLevels.CurrentReadOrWrite,
-    Value        = 42.0,
-};
-
-parentFolder.AddChild(variable);
-AddPredefinedNode(SystemContext, variable);
+<!-- @code-block language="csharp" label="adding a variable" -->
+```csharp
+// _mgr is the TestNodeManager passed to your builder's constructor.
+var variable = _mgr.CreateVariable<double>(
+    parentFolder,
+    "TestServer/MyModule/MyVariable",     // path string used as the NodeId.s
+    "MyVariable",                         // BrowseName / DisplayName
+    DataTypeIds.Double,
+    ValueRanks.Scalar,
+    42.0);                                // initial value
 ```
 <!-- @endcode-block -->
 
-For read-only:
+`CreateVariable<T>` defaults `AccessLevel` and `UserAccessLevel`
+to `CurrentReadOrWrite`. To make the variable read-only, pass an
+explicit `accessLevel`:
 
-```text
-AccessLevel = AccessLevels.CurrentRead;
-UserAccessLevel = AccessLevels.CurrentRead;
+```csharp
+_mgr.CreateVariable<double>(parent, path, name, DataTypeIds.Double,
+    ValueRanks.Scalar, 42.0, AccessLevels.CurrentRead);
 ```
+
+If you prefer to construct the `BaseDataVariableState` by hand
+(for example to set extra fields like `Historizing`), call
+`AddPredefinedNode(SystemContext, node)` via the
+`TestNodeManager.AddNode` helper — `AddPredefinedNode` itself is
+protected on the base class.
 
 ## Adding a method
 
-<!-- @code-block language="text" label="adding a method" -->
-```text
-var method = new MethodState(parentFolder)
-{
-    NodeId       = new NodeId("MyMethod", NamespaceIndex),
-    BrowseName   = new QualifiedName("MyMethod", NamespaceIndex),
-    DisplayName  = "MyMethod",
-    Executable   = true,
-    UserExecutable = true,
-};
+The existing `MethodsBuilder` uses
+`TestNodeManager.CreateMethod(parent, path, name, handler, inArgs, outArgs)`.
+The handler receives raw `IList<object>` (no `Argument` wrapper);
+index into them with the same casts the production methods use.
 
-method.InputArguments = new PropertyState<Argument[]>(method)
-{
-    NodeId     = new NodeId("MyMethod_InputArgs", NamespaceIndex),
-    BrowseName = BrowseNames.InputArguments,
-    Value = new Argument[]
+<!-- @code-block language="csharp" label="adding a method" -->
+```csharp
+_mgr.CreateMethod(
+    parentFolder,
+    "TestServer/MyModule/Uppercase",
+    "Uppercase",
+    (input, output) =>
     {
-        new Argument {
+        var s = (string)input[0];
+        output[0] = s.ToUpperInvariant();
+    },
+    new[]
+    {
+        new Argument
+        {
             Name = "input",
             DataType = DataTypeIds.String,
             ValueRank = ValueRanks.Scalar,
+            Description = new LocalizedText("en", "Input string"),
         },
     },
-};
-
-method.OutputArguments = new PropertyState<Argument[]>(method)
-{
-    NodeId     = new NodeId("MyMethod_OutputArgs", NamespaceIndex),
-    BrowseName = BrowseNames.OutputArguments,
-    Value = new Argument[]
+    new[]
     {
-        new Argument {
+        new Argument
+        {
             Name = "result",
             DataType = DataTypeIds.String,
             ValueRank = ValueRanks.Scalar,
+            Description = new LocalizedText("en", "Upper-cased string"),
         },
-    },
-};
-
-method.OnCallMethod = (context, objectId, inputArgs, outputArgs) =>
-{
-    var input = (string)inputArgs[0].Value;
-    outputArgs[0] = new Variant(input.ToUpper());
-    return ServiceResult.Good;
-};
-
-parentFolder.AddChild(method);
-AddPredefinedNode(SystemContext, method);
+    });
 ```
 <!-- @endcode-block -->
+
+`CreateMethod` wraps the handler in a try/catch that returns
+`Bad_InternalError` on any uncaught exception. If you need a
+specific `StatusCode`, throw `ServiceResultException(StatusCodes.Xxx, ...)`
+**before** `CreateMethod` swallows the exception, or call
+`output[0]` only after validating inputs and short-circuit by
+throwing.
 
 ## Adding a dynamic (timer-driven) variable
 
-<!-- @code-block language="text" label="dynamic variable" -->
-```text
-private Timer _myTimer;
-private uint _counter;
-
-private void AddMyCounter(FolderState parent)
+<!-- @code-block language="csharp" label="dynamic variable" -->
+```csharp
+public void Build(List<IDisposable> timers)
 {
-    var v = new BaseDataVariableState<uint>(parent)
-    {
-        NodeId       = new NodeId("MyCounter", NamespaceIndex),
-        BrowseName   = new QualifiedName("MyCounter", NamespaceIndex),
-        DisplayName  = "MyCounter",
-        DataType     = DataTypeIds.UInt32,
-        ValueRank    = ValueRanks.Scalar,
-        AccessLevel  = AccessLevels.CurrentRead,
-        UserAccessLevel = AccessLevels.CurrentRead,
-        Value        = _counter,
-    };
+    var v = _mgr.CreateVariable<uint>(
+        parentFolder,
+        "TestServer/MyModule/MyCounter",
+        "MyCounter",
+        DataTypeIds.UInt32,
+        ValueRanks.Scalar,
+        0u,
+        AccessLevels.CurrentRead);
 
-    parent.AddChild(v);
-    AddPredefinedNode(SystemContext, v);
+    uint counter = 0;
 
-    _myTimer = new Timer(_ =>
+    timers.Add(new Timer(_ =>
     {
-        _counter++;
-        v.Value = _counter;
+        counter++;
+        v.Value = counter;
         v.Timestamp = DateTime.UtcNow;
-        v.ClearChangeMasks(SystemContext, false);
-    }, null, 1000, 1000);
-}
-
-public void Stop()
-{
-    _myTimer?.Dispose();
+        v.ClearChangeMasks(_context, false);
+    }, null, 1000, 1000));
 }
 ```
 <!-- @endcode-block -->
 
-Track every timer in a list — disposed in `Stop()`. Without
-this, the daemon won't shut down cleanly.
+Add the timer to the `List<IDisposable> timers` passed in by
+`TestNodeManager`. The node manager keeps the list and disposes
+every entry in `TestNodeManager.Dispose(bool)` — you do not need
+your own `Stop()` method.
 
 ## Adding a custom event type
 
-<!-- @code-block language="text" label="custom event type" -->
-```text
-var motorFaultType = new BaseObjectTypeState()
+The shipped `EventsAlarmsBuilder` does **not** register any
+custom event types — it constructs plain `BaseEventState`
+instances and stamps them with `ObjectTypeIds.BaseEventType`
+or `ObjectTypeIds.SystemEventType`. If you need a custom event
+type, register a `BaseObjectTypeState` of your own, then point
+your reported event's `EventType.Value` at its NodeId:
+
+<!-- @code-block language="csharp" label="custom event type" -->
+```csharp
+var motorFaultType = new BaseObjectTypeState
 {
-    NodeId       = new NodeId("MotorFaultEventType", NamespaceIndex),
-    BrowseName   = new QualifiedName("MotorFaultEventType", NamespaceIndex),
-    DisplayName  = "MotorFaultEventType",
+    SymbolicName = "MotorFaultEventType",
+    NodeId       = new NodeId("MotorFaultEventType", _mgr.NamespaceIndex),
+    BrowseName   = new QualifiedName("MotorFaultEventType", _mgr.NamespaceIndex),
+    DisplayName  = new LocalizedText("en", "MotorFaultEventType"),
     SuperTypeId  = ObjectTypeIds.BaseEventType,
     IsAbstract   = false,
 };
 
 var motorIdProp = new PropertyState<string>(motorFaultType)
 {
-    NodeId       = new NodeId("MotorFaultEventType_MotorId", NamespaceIndex),
-    BrowseName   = new QualifiedName("MotorId", NamespaceIndex),
+    SymbolicName = "MotorId",
+    NodeId       = new NodeId("MotorFaultEventType/MotorId", _mgr.NamespaceIndex),
+    BrowseName   = new QualifiedName("MotorId", _mgr.NamespaceIndex),
     DataType     = DataTypeIds.String,
     ValueRank    = ValueRanks.Scalar,
 };
 motorFaultType.AddChild(motorIdProp);
+_mgr.AddNode(_context, motorFaultType);
+
+// Later, when raising an event from a timer:
+// var e = new BaseEventState(emitter);
+// e.Initialize(_context, emitter, EventSeverity.High, new LocalizedText("..."));
+// e.EventType.Value = motorFaultType.NodeId;
+// emitter.ReportEvent(_context, e);
 ```
 <!-- @endcode-block -->
 
-Then raise it the same way `EventsAlarmsBuilder` raises its
-`SimpleEventType` — see that file for the pattern.
+Note that selecting the `MotorId` field from a subscription's
+`selectClause` requires emitting an event instance that actually
+carries that field; `BaseEventState` will not — you would need a
+generated subclass (e.g. via Opc.Ua model compiler) to expose
+properties beyond the standard `BaseEventType` set.
 
 ## Adding a user account
 
@@ -232,18 +250,43 @@ docker compose restart opcua-userpass
 ```
 <!-- @endcode-block -->
 
-For a non-default role, extend
-`UserManager.GetUserRoles()` in
-`src/TestServer/UserManagement/UserManager.cs`:
+For a non-default role, you have two extension points — neither
+is `GetUserRoles()` (no such method exists):
 
-<!-- @code-block language="text" label="UserManager.cs" -->
-```text
-case "engineer":
-    return new[] { "AuthenticatedUser", "Operator", "Engineer" };
-case "supervisor":
-    return new[] { "AuthenticatedUser", "Operator", "ConfigureAdmin" };
+1. Extend `UserManager` itself (`src/TestServer/UserManagement/UserManager.cs`)
+   with a helper like `IsEngineer(username)` mirroring the
+   existing `IsAdmin` / `IsOperator` predicates.
+2. Wire the new role into the `switch` in
+   `AccessControlBuilder.CreateRoleProtectedVariable` so write
+   hooks know how to evaluate `minimumRole = "engineer"`.
+
+<!-- @code-block language="csharp" label="UserManager.cs additions" -->
+```csharp
+public bool IsEngineer(string username)
+    => GetRole(username) is "admin" or "engineer";
+
+public bool IsSupervisor(string username)
+    => GetRole(username) is "admin" or "supervisor";
 ```
 <!-- @endcode-block -->
+
+`AccessControlBuilder.cs`:
+
+```csharp
+var hasAccess = minimumRole switch
+{
+    "admin"      => _userManager.IsAdmin(username),
+    "operator"   => _userManager.IsOperator(username),
+    "engineer"   => _userManager.IsEngineer(username),
+    "supervisor" => _userManager.IsSupervisor(username),
+    _            => true,
+};
+```
+
+The `permissions` array in `users.json` is exposed via
+`UserManager.HasPermission(username, permission)` for tests that
+want to gate on individual permission strings rather than on a
+role bucket.
 
 ## Creating a new address-space builder
 
@@ -253,45 +296,35 @@ Step-by-step for a whole new feature group.
 
 `src/TestServer/AddressSpace/MyModuleBuilder.cs`:
 
-<!-- @code-block language="text" label="MyModuleBuilder.cs" -->
-```text
+<!-- @code-block language="csharp" label="MyModuleBuilder.cs" -->
+```csharp
 using Opc.Ua;
-using Opc.Ua.Server;
+using TestServer.Server;
 
 namespace TestServer.AddressSpace;
 
 public class MyModuleBuilder
 {
-    private readonly IServerInternal _server;
-    private readonly ushort _namespaceIndex;
-    private readonly List<Timer> _timers = new();
+    private readonly TestNodeManager _mgr;
+    private readonly FolderState _root;
+    private readonly ISystemContext _context;
 
-    public MyModuleBuilder(IServerInternal server, ushort namespaceIndex)
+    public MyModuleBuilder(TestNodeManager mgr, FolderState root, ISystemContext context)
     {
-        _server = server;
-        _namespaceIndex = namespaceIndex;
+        _mgr = mgr;
+        _root = root;
+        _context = context;
     }
 
-    public FolderState Build(FolderState root, ServerSystemContext context)
+    // Use Build(List<IDisposable> timers) instead if you need timers.
+    public void Build()
     {
-        var folder = new FolderState(root)
-        {
-            NodeId       = new NodeId("MyModule", _namespaceIndex),
-            BrowseName   = new QualifiedName("MyModule", _namespaceIndex),
-            DisplayName  = "MyModule",
-            TypeDefinitionId = ObjectTypeIds.FolderType,
-        };
-        root.AddChild(folder);
+        var folder = _mgr.CreateFolder(_root, "TestServer/MyModule", "MyModule");
 
-        // add your nodes here
-
-        return folder;
-    }
-
-    public void Stop()
-    {
-        foreach (var t in _timers) t.Dispose();
-        _timers.Clear();
+        // Example: one read-write Double variable.
+        _mgr.CreateVariable<double>(folder,
+            "TestServer/MyModule/MyValue", "MyValue",
+            DataTypeIds.Double, ValueRanks.Scalar, 0.0);
     }
 }
 ```
@@ -299,27 +332,32 @@ public class MyModuleBuilder
 
 ### 2. Add a feature toggle (optional)
 
-`src/TestServer/Configuration/ServerConfig.cs`:
+`src/TestServer/Configuration/ServerConfig.cs`. Add the field
+with its default, then read it from the environment in
+`FromEnvironment()`:
 
-<!-- @code-block language="text" label="ServerConfig.cs" -->
-```text
-public bool EnableMyModule { get; set; }
-    = GetBoolEnv("OPCUA_ENABLE_MY_MODULE", true);
+<!-- @code-block language="csharp" label="ServerConfig.cs" -->
+```csharp
+public bool EnableMyModule { get; set; } = true;
+
+// inside FromEnvironment(), alongside the other GetEnvBool calls:
+config.EnableMyModule = GetEnvBool("OPCUA_ENABLE_MY_MODULE", config.EnableMyModule);
 ```
 <!-- @endcode-block -->
 
 ### 3. Wire it into the node manager
 
 `src/TestServer/Server/TestNodeManager.cs` — inside
-`CreateAddressSpace()`:
+`CreateAddressSpace()`, follow the same pattern the existing
+builders use:
 
-<!-- @code-block language="text" label="TestNodeManager.cs" -->
-```text
+<!-- @code-block language="csharp" label="TestNodeManager.cs" -->
+```csharp
 if (_config.EnableMyModule)
 {
-    Console.WriteLine("[AddressSpace] Building MyModule…");
-    var builder = new MyModuleBuilder(Server, _namespaceIndex);
-    builder.Build(rootFolder, SystemContext);
+    var myModule = new MyModuleBuilder(this, root, SystemContext);
+    myModule.Build();
+    Console.WriteLine("  [+] MyModule address space built");
 }
 ```
 <!-- @endcode-block -->

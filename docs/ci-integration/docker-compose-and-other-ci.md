@@ -22,44 +22,48 @@ The suite ships two compose files:
 
 | File                      | Purpose                                              |
 | ------------------------- | ---------------------------------------------------- |
-| `docker-compose.yml`      | Local dev — builds from source                       |
-| `docker-compose.ci.yml`   | CI override — uses published image, no auto-restart  |
+| `docker-compose.yml`      | Always builds the image locally (`build: .`)         |
+| `docker-compose.ci.yml`   | Minimal CI override — sets `restart: "no"` on every service and disables the single healthcheck on `opcua-no-security` |
 
-For CI, use both — the override file takes precedence:
+The CI override is intentionally tiny. It does **not** swap the
+image (there is no `image:` field anywhere in `docker-compose.ci.yml`),
+it does **not** read `OPCUA_SERVER_IMAGE` (no such variable
+exists in the shipped compose files), and it does **not**
+configure any registry pull. Both files build from local source.
+
+For CI, layer the override on top of the base file so containers
+do not auto-restart on crash:
 
 <!-- @code-block language="bash" label="terminal — CI start" -->
 ```bash
-export OPCUA_SERVER_IMAGE=ghcr.io/php-opcua/uanetstandard-test-suite:latest
-
-docker compose -f docker-compose.yml -f docker-compose.ci.yml up -d
+docker compose -f docker-compose.yml -f docker-compose.ci.yml up -d --build --wait
 ```
 <!-- @endcode-block -->
 
-Without specifying `OPCUA_SERVER_IMAGE`, the override uses
-`:latest`. **Pin** to a tag in production CI:
-
-<!-- @code-block language="bash" label="pin the image" -->
-```bash
-export OPCUA_SERVER_IMAGE=ghcr.io/php-opcua/uanetstandard-test-suite:v1.2.0
-```
-<!-- @endcode-block -->
+If your CI runner already has the suite repo (e.g. via `actions/checkout`),
+`docker compose up --build` rebuilds the image on the runner. The
+build context is the repo root — no external image registry is
+consulted by the shipped configuration.
 
 ## Standard CI sequence
 
 ```text
-1. Set OPCUA_SERVER_IMAGE.
-2. docker pull "$OPCUA_SERVER_IMAGE".
-3. docker compose up -d (with the CI override).
-4. Wait for ports to be open.
-5. Run your tests.
-6. docker compose down at the end.
+1. Check out (or copy) the uanetstandard-test-suite repo.
+2. docker compose -f docker-compose.yml -f docker-compose.ci.yml up -d --build --wait
+3. (Optional) Wait for ports / poll `--health` on the services
+   you care about.
+4. Run your tests.
+5. docker compose -f docker-compose.yml -f docker-compose.ci.yml down at the end.
 ```
 
 ### Wait for ports
 
-`docker-compose.ci.yml` disables healthchecks (CI doesn't want
-the daemon to restart on failure — it wants to fail loudly).
-So your CI step needs to wait for ports itself:
+`docker-compose.ci.yml` disables the healthcheck on the
+`opcua-no-security` service only — that is the only service in
+`docker-compose.yml` that declares one in the first place. The
+other 11 services have no healthcheck either way; `docker compose
+up --wait` cannot block on their readiness. So CI typically polls
+the TCP ports itself:
 
 <!-- @code-block language="bash" label="wait loop" -->
 ```bash
@@ -88,12 +92,11 @@ integration-tests:
   image: docker:24
   services:
     - docker:24-dind
-  variables:
-    OPCUA_SERVER_IMAGE: ghcr.io/php-opcua/uanetstandard-test-suite:v1.2.0
   before_script:
-    - apk add --no-cache docker-cli-compose netcat-openbsd
-    - docker pull "$OPCUA_SERVER_IMAGE"
-    - docker compose -f docker-compose.yml -f docker-compose.ci.yml up -d
+    - apk add --no-cache docker-cli-compose git netcat-openbsd
+    - git clone --depth 1 https://github.com/php-opcua/uanetstandard-test-suite.git
+    - cd uanetstandard-test-suite
+    - docker compose -f docker-compose.yml -f docker-compose.ci.yml up -d --build
     - |
       for port in 4840 4841 4842 4843 4844 4845 4846 4847 4848 4849 4851; do
         for i in $(seq 1 60); do
@@ -105,7 +108,7 @@ integration-tests:
     - export OPCUA_CERTS_DIR=$PWD/certs
     - cargo test
   after_script:
-    - docker compose -f docker-compose.yml -f docker-compose.ci.yml down
+    - cd uanetstandard-test-suite && docker compose -f docker-compose.yml -f docker-compose.ci.yml down
 ```
 <!-- @endcode-block -->
 
@@ -118,14 +121,11 @@ Docker.
 ```text
 pipeline {
   agent any
-  environment {
-    OPCUA_SERVER_IMAGE = 'ghcr.io/php-opcua/uanetstandard-test-suite:v1.2.0'
-  }
   stages {
     stage('Start servers') {
       steps {
-        sh 'docker pull "$OPCUA_SERVER_IMAGE"'
-        sh 'docker compose -f docker-compose.yml -f docker-compose.ci.yml up -d'
+        sh 'git clone --depth 1 https://github.com/php-opcua/uanetstandard-test-suite.git'
+        sh 'cd uanetstandard-test-suite && docker compose -f docker-compose.yml -f docker-compose.ci.yml up -d --build'
         sh '''
           for port in 4840 4841 4842 4843 4844 4845 4846 4847 4848 4849 4851; do
             for i in $(seq 1 60); do
@@ -138,13 +138,13 @@ pipeline {
     }
     stage('Test') {
       steps {
-        sh 'OPCUA_CERTS_DIR=$PWD/certs cargo test'
+        sh 'OPCUA_CERTS_DIR=$PWD/uanetstandard-test-suite/certs cargo test'
       }
     }
   }
   post {
     always {
-      sh 'docker compose -f docker-compose.yml -f docker-compose.ci.yml down'
+      sh 'cd uanetstandard-test-suite && docker compose -f docker-compose.yml -f docker-compose.ci.yml down'
     }
   }
 }
@@ -159,15 +159,14 @@ jobs:
   test:
     machine:
       image: ubuntu-2204:current
-    environment:
-      OPCUA_SERVER_IMAGE: ghcr.io/php-opcua/uanetstandard-test-suite:v1.2.0
     steps:
       - checkout
       - run:
           name: Start OPC UA suite
           command: |
-            docker pull "$OPCUA_SERVER_IMAGE"
-            docker compose -f docker-compose.yml -f docker-compose.ci.yml up -d
+            git clone --depth 1 https://github.com/php-opcua/uanetstandard-test-suite.git
+            cd uanetstandard-test-suite
+            docker compose -f docker-compose.yml -f docker-compose.ci.yml up -d --build
       - run:
           name: Wait for servers
           command: |
@@ -180,11 +179,11 @@ jobs:
       - run:
           name: Run tests
           command: |
-            export OPCUA_CERTS_DIR=$PWD/certs
+            export OPCUA_CERTS_DIR=$PWD/uanetstandard-test-suite/certs
             cargo test
       - run:
           name: Cleanup
-          command: docker compose -f docker-compose.yml -f docker-compose.ci.yml down
+          command: cd uanetstandard-test-suite && docker compose -f docker-compose.yml -f docker-compose.ci.yml down
 ```
 <!-- @endcode-block -->
 
@@ -204,12 +203,12 @@ docker compose up -d
 ```
 <!-- @endcode-block -->
 
-To get the **published** image locally (no build):
+To run with the CI override locally (containers will not
+auto-restart on crash, easier to inspect failures):
 
-<!-- @code-block language="bash" label="local with image" -->
+<!-- @code-block language="bash" label="local with CI override" -->
 ```bash
-export OPCUA_SERVER_IMAGE=ghcr.io/php-opcua/uanetstandard-test-suite:latest
-docker compose -f docker-compose.yml -f docker-compose.ci.yml up -d
+docker compose -f docker-compose.yml -f docker-compose.ci.yml up -d --build
 ```
 <!-- @endcode-block -->
 
@@ -245,13 +244,13 @@ clean for the next job.
 
 ## Image freshness
 
-`ghcr.io/php-opcua/uanetstandard-test-suite` publishes:
-
-- **Versioned tags** — `v1.2.0`, `v1.1.0`, etc. (immutable)
-- **`:latest`** — the latest stable release
-- **`:master`** — bleeding edge (CI integration testing only)
-
-Production CI should pin a version tag.
+The shipped compose files build the image from the repo's
+`Dockerfile` every time (`build: .`). To pin a stable version,
+check out a specific git tag of `php-opcua/uanetstandard-test-suite`
+before running `docker compose up --build`. A pre-built registry
+image is not configured by the shipped files; if your CI maintains
+one, you can layer a third compose file that supplies an
+`image:` field per service.
 
 ## Where to read next
 

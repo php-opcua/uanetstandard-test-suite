@@ -109,9 +109,18 @@ AuthenticatedUser
 
 | Server          | Identity                       | Expected                       |
 | --------------- | ------------------------------ | ------------------------------ |
-| `opcua-userpass` | `admin` + wrong password      | `Bad_IdentityTokenRejected`    |
-| `opcua-userpass` | `unknown` + any password      | `Bad_IdentityTokenRejected`    |
+| `opcua-userpass` | `admin` + wrong password      | `Bad_UserAccessDenied`         |
+| `opcua-userpass` | `unknown` + any password      | `Bad_UserAccessDenied`         |
 | `opcua-userpass` | Anonymous                     | `Bad_IdentityTokenRejected`    |
+
+The two failure codes are distinct — `Bad_UserAccessDenied`
+means "the credentials were of the right type but failed
+validation" (wrong password or unknown user), while
+`Bad_IdentityTokenRejected` means "the token type itself is
+not accepted on this endpoint" (Anonymous on a server with
+`AllowAnonymous=false`, or Certificate on a server with
+`AuthCertificate=false`). Asserting on the wrong code will
+hide bugs in either branch.
 
 ### Negative path — role-based write rejection
 
@@ -144,9 +153,14 @@ docker compose restart opcua-userpass
 ```
 <!-- @endcode-block -->
 
-The new user is now valid. For non-default roles, also extend
-`UserManager.GetUserRoles()` in `src/TestServer/UserManagement/` —
-see [Customization](../customization/forking-and-adding-nodes.md).
+The new user is now valid. `UserManager` only exposes
+`GetRole(username) → string`, `IsAdmin`, `IsOperator` and
+`HasPermission(username, permission)`; there is no
+`GetUserRoles()` method. For role-aware write hooks beyond
+`operator`/`admin`, extend `IsOperator`/`IsAdmin` (or add a
+new helper) and the `switch` in
+`AccessControlBuilder.CreateRoleProtectedVariable`. See
+[Customization](../customization/forking-and-adding-nodes.md).
 
 ## Where to read next
 

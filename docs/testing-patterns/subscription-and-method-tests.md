@@ -175,8 +175,14 @@ Tests that Variant encoding round-trips correctly for every type.
 call(TestServer/Methods/MatrixTranspose, inputs=[[1,2,3], 2, 2])
   # 3 elements but 2*2 = 4 expected
 
-→ status = Bad_InvalidArgument
+→ status = Bad_InternalError
 ```
+
+The handler does not validate `matrix.Length == rows * cols`,
+so the mismatched length raises `IndexOutOfRangeException`
+inside the method body. The generic wrapper in
+`TestNodeManager.CreateMethod` catches every exception and
+returns `Bad_InternalError` — not `Bad_InvalidArgument`.
 
 ## Event subscription tests
 
@@ -188,19 +194,29 @@ monitor(Server, EventFilter(
     selectClause = [EventId, EventType, Message, Severity, Time],
 ))
 
-→ wait 3s → at least one SimpleEventType notification ("Periodic event #N")
+→ wait 3s → at least one event from the 2 s timer arrives
+  (Message = "Simple event #N", EventType = BaseEventType)
 ```
 
 ### Filter by event type
 
+The suite does not register any custom event types — all three
+periodic timers emit `BaseEventState` instances stamped with
+either `ObjectTypeIds.BaseEventType` or
+`ObjectTypeIds.SystemEventType`. Use those standard NodeIds:
+
 ```text
 filter = EventFilter(
     selectClause = [...],
-    whereClause  = OfType(SimpleEventType),
+    whereClause  = OfType(BaseEventType),
 )
+→ events from the 2 s and 5 s timers (both stamped BaseEventType)
 
-→ only SimpleEventType events; ComplexEventType and
-  SystemStatusEventType filtered out
+filter = EventFilter(
+    selectClause = [...],
+    whereClause  = OfType(SystemEventType),
+)
+→ events from the 10 s "System status" timer
 ```
 
 ### Severity filter
@@ -208,35 +224,38 @@ filter = EventFilter(
 ```text
 filter = EventFilter(
     selectClause = [...],
-    whereClause  = Severity >= 500,
+    whereClause  = Severity >= 300,
 )
 
-→ only SystemStatusEventType during Maintenance state
-  (severity = 600)
+→ only the 5 s "Complex event" timer (Severity = 500); the
+  2 s timer (Severity = 200) and 10 s timer (Severity = 100)
+  are filtered out
 ```
 
-### On-demand event via method
+### On-demand event via method (no-op stub)
 
 ```text
-# Setup subscription with no filter first
+# Setup subscription
 subscribe(Server, EventFilter(...))
 
-# Trigger
+# Call the stub
 call(TestServer/Methods/GenerateEvent, inputs=["test event", 750])
 
-→ event arrives with Message="test event", Severity=750
+→ method returns Good
+→ NO event arrives. The handler only writes a console line on
+  the server (`Console.WriteLine`) — it does not call
+  ReportEvent. There is no on-demand event-emission path in
+  the current build.
 ```
 
 ### Custom property in selectClause
 
-```text
-filter = EventFilter(
-    selectClause = [Message, Severity, EventPayload],
-    whereClause  = OfType(SimpleEventType),
-)
-
-→ events carry EventPayload = "payload-N"
-```
+There are no custom event-type properties in this server. A
+`selectClause` like
+`[Message, Severity, EventId, SourceNode, ReceiveTime, …]`
+returns only the standard `BaseEventType` fields. Trying to
+select a non-existent path such as `EventPayload` yields a null
+value for that field.
 
 ## Alarm subscription tests
 

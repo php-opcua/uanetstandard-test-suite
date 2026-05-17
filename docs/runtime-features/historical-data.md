@@ -20,14 +20,17 @@ buffering up to 10 000 samples per variable (rolling).
 
 ## The variables
 
-| BrowseName              | Type     | Pattern                                   |
-| ----------------------- | -------- | ----------------------------------------- |
-| `HistoricalTemperature` | Double   | `22 + 8·sin(t/60) + noise`                |
-| `HistoricalPressure`    | Double   | `101.325 + 5·cos(t/120) + noise`          |
-| `HistoricalCounter`     | UInt32   | Increments by 1 every second              |
-| `HistoricalBoolean`     | Boolean  | Random `true`/`false`                     |
+| BrowseName              | Type     | Pattern                                                                |
+| ----------------------- | -------- | ---------------------------------------------------------------------- |
+| `HistoricalTemperature` | Double   | `25 + 10·sin(t / 30) + (rand·2 - 1)` — roughly `[14, 36]`              |
+| `HistoricalPressure`    | Double   | `1013 + 20·cos(t / 45) + (rand·3 - 1.5)` — roughly `[992, 1034]`       |
+| `HistoricalCounter`     | UInt32   | Increments by 1 every second; the **first** historized value is `1`     |
+| `HistoricalBoolean`     | Boolean  | Toggles every ~5 s — deterministic, follows `(int)(t / 5) % 2 == 0`     |
 
-All four are read-only (`R+HR`).
+`t` is the elapsed seconds component of `DateTime.UtcNow.TimeOfDay`.
+All four are read-only (`R + HR`). `HistoricalCounter` initialises
+to `0` but is incremented before the first sample is written to
+history, so the first historized value is `1`, not `0`.
 
 ## Recording
 
@@ -43,14 +46,16 @@ start being overwritten.
 
 ## HistoryRead operations supported
 
-| Operation                  | Use                                            |
-| -------------------------- | ---------------------------------------------- |
-| `ReadRawModifiedDetails`   | Raw samples within a time range                |
-| `ReadProcessedDetails`     | Aggregates (average, min, max, count) over intervals |
-| `ReadAtTimeDetails`        | Interpolated value at specific timestamps      |
+| Operation                  | Status in this server                                       |
+| -------------------------- | ----------------------------------------------------------- |
+| `ReadRawModifiedDetails`   | **Implemented** by `TestNodeManager.HistoryReadRawModified`. |
+| `ReadProcessedDetails`     | **Not implemented.** Falls through to the UA-.NETStandard base class, which returns `Bad_HistoryOperationUnsupported`. |
+| `ReadAtTimeDetails`        | **Not implemented.** Same as above — `Bad_HistoryOperationUnsupported`. |
+| `ReadEventDetails`         | **Not implemented.** No event history is recorded.           |
 
-`ReadEventDetails` (for event history) is **not** implemented —
-no event history is recorded.
+Only the raw read path is exercised end-to-end. If your test
+matrix expects aggregates or at-time interpolation, the suite is
+not the right surface for it today.
 
 ## ReadRawModifiedDetails
 
@@ -75,35 +80,17 @@ the continuation point fetch successive pages.
 
 ## ReadProcessedDetails
 
-Aggregates server-side. Inputs:
-
-| Param                 | Notes                                       |
-| --------------------- | ------------------------------------------- |
-| `StartTime` / `EndTime` | Time range                                |
-| `ProcessingInterval`  | Bucket size in ms                          |
-| `AggregateType`       | NodeId of the aggregate function           |
-
-Supported aggregate functions (subset of standard):
-
-- `Average`
-- `Minimum`
-- `Maximum`
-- `Count`
-
-Each `processingInterval`-sized bucket gets one returned value.
+Not implemented in this server. Calling it returns
+`Bad_HistoryOperationUnsupported`. The aggregates listed in
+`AggregateFunctions` (Average, Minimum, Maximum, Count, ...) are
+the standard NodeIds advertised by the stack, not invocable
+endpoints in this build.
 
 ## ReadAtTimeDetails
 
-Inputs:
-
-| Param            | Notes                                        |
-| ---------------- | -------------------------------------------- |
-| `ReqTimes`       | Array of timestamps                          |
-| `UseSimpleBounds` | Interpolation behaviour                      |
-
-Returns interpolated values at the requested timestamps. For
-in-between-sample times, the server linearly interpolates (or
-returns the simple-bound depending on the flag).
+Not implemented. Calling it returns
+`Bad_HistoryOperationUnsupported`. There is no server-side
+interpolation between recorded samples.
 
 ## Test patterns
 
@@ -118,30 +105,24 @@ returns the simple-bound depending on the flag).
 
 ### Counter monotonicity
 
-`HistoricalCounter` starts at 0 and ticks up by 1 each second.
-A 30-second range should return values `[k, k+1, ..., k+29]` for
-some starting `k`.
+`HistoricalCounter` starts at `0` in the live value but the
+first sample written to the history store is `1` (the counter is
+incremented before each insert). A 30-second range over a
+freshly started server returns `[1, 2, …, 30]`; over a long-
+running server it returns `[k, k+1, …, k+29]` for some `k ≥ 1`.
 
 ### Boolean history
 
-`HistoricalBoolean` flips randomly. A 30-s read returns ~30
-samples with random `true`/`false`.
+`HistoricalBoolean` toggles every ~5 s on a deterministic
+schedule (`(int)(t/5) % 2 == 0`). A 30-s read returns ~30
+samples grouped in runs of 5 identical values, not a random mix.
 
-### Aggregates
+### Aggregates (not supported)
 
-```text
-ReadProcessedDetails(
-  HistoricalTemperature,
-  startTime = t - 5 min,
-  endTime   = t,
-  processingInterval = 60000,    # 1 min buckets
-  aggregateType = Average,
-)
-→ 5 returned values, one per minute, each ≈ 22 (with small variance)
-```
-
-Compare `Minimum` and `Maximum` for the same range — they should
-straddle the average.
+Calling `ReadProcessedDetails` returns
+`Bad_HistoryOperationUnsupported` — see the operations table
+above. If your client needs average/min/max, compute them from
+the raw samples after a `ReadRawModifiedDetails` call.
 
 ### Continuation
 
@@ -166,15 +147,13 @@ Sanity-check that range bounds are honoured exactly.
 
 ## Bounding values
 
-With `ReturnBounds=true`:
-
-- The first returned value has `sourceTimestamp < StartTime`
-  (the last value before the range).
-- The last has `sourceTimestamp > EndTime` (the first value
-  after the range).
-
-Useful for plotting — you get the values that bound the chart
-window for proper interpolation at the edges.
+The current `HistoryReadRawModified` implementation just filters
+the in-memory list by `SourceTimestamp` between `StartTime` and
+`EndTime` (inclusive on both sides) and sorts ascending. It does
+**not** specifically inject bounding values when
+`ReturnBounds=true` — the request flag is ignored by the custom
+handler. If you need bounding values for plotting, pad the
+requested time range by one sample-interval on each side.
 
 ## Recording behaviour
 
@@ -182,8 +161,10 @@ The recording loop runs **server-side, every 1 000 ms**, sampling
 the current value of each historical variable. The buffer is a
 ring — at sample 10 001, sample 1 is discarded.
 
-The 10 000-sample cap is `OPCUA_HISTORY_MAX_SAMPLES` (default
-10 000) — adjustable via env var if you need more or less.
+The 10 000-sample cap is the `maxHistorySize` constant inside
+`HistoricalBuilder.cs`. It is **not** environment-driven —
+there is no `OPCUA_HISTORY_MAX_SAMPLES` variable. Changing the
+cap requires editing the source.
 
 ## Where to read next
 

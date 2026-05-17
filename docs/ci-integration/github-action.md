@@ -43,7 +43,7 @@ all) are accepting connections.
 | Input          | Default | Effect                                                |
 | -------------- | ------- | ----------------------------------------------------- |
 | `servers`      | `all`   | Comma-separated list of services to start              |
-| `wait-timeout` | `120`   | Seconds to wait for healthchecks before failing       |
+| `wait-timeout` | `120`   | Seconds passed to `docker compose up --wait --wait-timeout`. Only the `opcua-no-security` service has a healthcheck — the other services are considered "started" as soon as the container is running. |
 
 Valid `servers` values:
 
@@ -131,17 +131,26 @@ the version to pick up new servers or fixes.
 
 ## What the Action does internally
 
-The composite action runs three things:
+The composite action runs four steps (see `action.yml`):
 
-1. Clones the suite repo into `.uanetstandard-test-suite/`.
-2. Builds the compose `--scale` arguments — services not in the
-   `servers` input get scaled to 0.
-3. Runs `docker compose -f docker-compose.yml -f docker-compose.ci.yml up -d --build --wait --wait-timeout=<input>`.
-4. Resolves the certs dir to an absolute path and sets the
-   `certs-dir` output.
+1. `actions/checkout` of `php-opcua/uanetstandard-test-suite`
+   into `.uanetstandard-test-suite/`.
+2. Builds `--scale <svc>=0` arguments for every service not in
+   the `servers` input (or no scale args when `servers: all`).
+3. Runs `docker compose up -d --build --wait --wait-timeout <input>`
+   in `.uanetstandard-test-suite/` with the computed scale args.
+   The action does **not** layer `docker-compose.ci.yml` — the
+   base file's `restart: unless-stopped` policies and the
+   `opcua-no-security` healthcheck apply.
+4. Verifies `certs/ca` exists, `chmod -R a+r certs/`, and exposes
+   the absolute path via the `certs-dir` output.
 
-`docker-compose.ci.yml` overrides set `restart: "no"` and
-disable healthchecks — CI environments don't auto-restart.
+Note: `--wait` only blocks until `docker compose` considers each
+service "started". Of the 12 services, only `opcua-no-security`
+has a healthcheck declared, so `--wait` returns once that one
+container reports healthy and the other 11 containers are simply
+"running". If you need to be sure a specific other server is
+ready, poll its TCP port after the action completes.
 
 See [`action.yml`](https://github.com/php-opcua/uanetstandard-test-suite/blob/master/action.yml)
 in the repo for the full file.

@@ -105,13 +105,13 @@ let result = session.read(
 
 A few representative reads to confirm everything's wired:
 
-| Browse path                                                | Type    | Notes                       |
-| ---------------------------------------------------------- | ------- | --------------------------- |
-| `TestServer/DataTypes/Scalar/BooleanValue`                  | Boolean | RW, initial value `true`   |
-| `TestServer/DataTypes/Scalar/Int32Value`                    | Int32   | RW, `-100000`              |
-| `TestServer/DataTypes/Array/Int32Array`                     | Int32[] | `[-100000, -1, 0, 1, 100000]` |
-| `TestServer/Dynamic/Counter`                                | UInt32  | Increments every second     |
-| `TestServer/Methods/Add`                                    | Method  | Inputs `a, b`, returns `a+b` |
+| Browse path                                                | Type    | Notes                          |
+| ---------------------------------------------------------- | ------- | ------------------------------ |
+| `TestServer/DataTypes/Scalar/BooleanValue`                  | Boolean | RW, initial value `true`      |
+| `TestServer/DataTypes/Scalar/Int32Value`                    | Int32   | RW, `-100000`                 |
+| `TestServer/DataTypes/Array/Int32Array`                     | Int32[] | `[-1000, 0, 1000]`            |
+| `TestServer/Dynamic/Counter`                                | UInt32  | 1 Hz; first observed value is `1` (initial `0` is incremented before publish) |
+| `TestServer/Methods/Add`                                    | Method  | Inputs `a, b`, returns `a+b`  |
 
 Try a write and read-back:
 

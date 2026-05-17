@@ -1,6 +1,6 @@
 ---
 eyebrow: 'Docs · Runtime features'
-lede:    'The three custom event types the suite emits, plus on-demand event generation. The test surface for event subscriptions and event filtering.'
+lede:    'Three periodic standard events fire from a single emitter object. The test surface for event subscriptions and basic event filtering — no custom event types.'
 
 see_also:
   - { href: './alarms.md',                                        meta: '4 min' }
@@ -15,9 +15,16 @@ next: { label: 'Alarms',             href: './alarms.md' }
 
 Path: `TestServer / Events`
 
-The suite defines **three custom event types** in `ns=1` and
-emits them periodically. Plus the `GenerateEvent` method
-([Methods](./methods.md)) raises events on demand.
+The suite does **not** define any custom event types. It emits
+three standard events on a fixed cadence from a single emitter
+Object. All three are constructed as `BaseEventState` instances
+and stamped with one of the standard `ObjectTypeIds` values; no
+`ns=1;s=SimpleEventType` (or similar) node is registered in the
+address space.
+
+This page describes what the server actually reports — anything
+not mentioned here is not implemented. The behaviour comes
+straight from `src/TestServer/AddressSpace/EventsAlarmsBuilder.cs`.
 
 ## The event emitter
 
@@ -25,62 +32,54 @@ emits them periodically. Plus the `GenerateEvent` method
 | --------------------- | ------- | ------------------------ |
 | `Events/EventEmitter` | Object  | `1` (SubscribeToEvents)   |
 
-This Object is registered as an event source on the standard
-`Server` node. You can subscribe to events on **either** the
-`EventEmitter` node or the `Server` node and receive the same
-event stream.
-
-## Custom event types
-
-### SimpleEventType
-
-Inherits from `BaseEventType`.
-
-| Extra property | Type    |
-| -------------- | ------- |
-| `EventPayload` | String  |
-
-Plus inherited fields: `EventId`, `EventType`, `SourceNode`,
-`SourceName`, `Time`, `ReceiveTime`, `Message`, `Severity`.
-
-### ComplexEventType
-
-Inherits from `BaseEventType`.
-
-| Extra property | Type    |
-| -------------- | ------- |
-| `Source`       | String  |
-| `Category`     | String  |
-| `NumericValue` | Double  |
-
-### SystemStatusEventType
-
-Inherits from `BaseEventType`.
-
-| Extra property  | Type    | Values                                       |
-| --------------- | ------- | -------------------------------------------- |
-| `SystemState`   | String  | `Running`, `Idle`, `Busy`, `Maintenance`     |
-| `CpuUsage`      | Double  | `0–100` (simulated)                          |
-| `MemoryUsage`   | Double  | `40–90` (simulated)                          |
+This Object is registered as the only event source for the
+periodic stream. Subscribing to events on the `Server` node will
+also forward these events via the standard event-bubbling path,
+because `EventEmitter` is a descendant of `Objects`.
 
 ## Periodic emission
 
-| Type                       | Interval | Severity | Message                          |
-| -------------------------- | -------- | -------- | -------------------------------- |
-| `SimpleEventType`          | 2 s      | 200      | `"Periodic event #N"`            |
-| `ComplexEventType`         | 5 s      | 300      | `"Complex event #N"`             |
-| `SystemStatusEventType`    | 10 s     | 100 or 600 | `"System status: <state>"`     |
+Three timers fire on independent intervals. Each one constructs a
+`BaseEventState`, stamps it with the fields below, and reports it
+through `EventEmitter.ReportEvent`.
 
-`SystemStatusEventType` raises severity to `600` when the
-simulated state cycles to `Maintenance`. All others use a fixed
-severity.
+| Timer | Interval | `EventType` (stamped)              | `Severity` | `SourceName`     | `Message` template                                        |
+| ----- | -------- | ----------------------------------- | ---------- | ---------------- | --------------------------------------------------------- |
+| #1    | 2 s      | `ObjectTypeIds.BaseEventType`       | `200`      | `"EventEmitter"` | `"Simple event #{counter}"`                               |
+| #2    | 5 s      | `ObjectTypeIds.BaseEventType`       | `500`      | `"EventEmitter"` | `"Complex event: category=ProcessAlert, value={F3}"`      |
+| #3    | 10 s     | `ObjectTypeIds.SystemEventType`     | `100`      | `"SystemMonitor"`| `"System status: CPU={n}%, Memory={n}%"`                  |
+
+Notes:
+
+- `counter` in timer #1 increments by 1 per emission and is
+  shared only within that timer's closure.
+- `{F3}` in timer #2 is a fresh `Random().NextDouble()` formatted
+  to three decimals (a fresh `Random` is instantiated **per
+  event**, so values are typically very close to each other
+  within the same wall-clock second).
+- The CPU and memory numbers in timer #3 come from
+  `rng.Next(5, 95)` / `rng.Next(30, 80)` respectively. The
+  severity is always `100` — there is no Maintenance state, no
+  state machine and no severity bump.
+- Every event also stamps `EventId` (fresh GUID), `Time` and
+  `ReceiveTime` (both `DateTime.UtcNow`) and a `SourceNode`
+  pointing at `EventEmitter.NodeId`.
+
+That is the complete list of selectable fields beyond the
+`BaseEventType` defaults. There are no `EventPayload`,
+`Category`, `NumericValue`, `SystemState`, `CpuUsage` or
+`MemoryUsage` properties on these events — the values are baked
+into the `Message` localized text.
 
 ## On-demand events
 
-Call `Methods/GenerateEvent(message, severity)` — see
-[Methods](./methods.md#generateevent). Raises a `BaseEventType`
-event with the given message and severity. No fixed cadence —
-controlled by your test.
+`Methods/GenerateEvent(message, severity)` exists in the address
+space (see [Methods](./methods.md#generateevent)) but the
+implementation only writes a line to the server's `Console.Out`.
+It does **not** call `ReportEvent` or otherwise raise an OPC UA
+event, so subscribers will never see anything from this method.
+If your test relies on triggering an event on demand, use one of
+the three periodic timers above or modify the source.
 
 ## Subscribing
 
@@ -100,106 +99,82 @@ monitor(Server, MonitoredItemEventsFilter(
 ))
 ```
 
-Wait 2 seconds — your first `SimpleEventType` arrives.
+Wait 2 seconds — the first message-from-timer-#1 event arrives.
 
 ### Type filter
 
 ```text
-filter = ContentFilter(OfType, SimpleEventType)
-→ only SimpleEventType events
+filter = ContentFilter(OfType, BaseEventType)
+→ events from timers #1 and #2 (both stamped BaseEventType)
+
+filter = ContentFilter(OfType, SystemEventType)
+→ events from timer #3
 ```
+
+There are no custom event types to filter on. `OfType` against a
+non-existent `ns=1;s=...` type will not match anything.
 
 ### Severity filter
 
 ```text
-filter = ContentFilter(Severity >= 500)
-→ only SystemStatusEventType in Maintenance state (severity 600)
+filter = ContentFilter(Severity >= 300)
+→ only timer #2 events (Severity 500)
 ```
 
-### Custom-property select
-
-For `SimpleEventType`:
-
-```text
-selectClause = [Message, Severity, EventPayload]
-```
-
-`EventPayload` is the custom field. It contains
-`"payload-N"` where `N` matches the event counter.
-
-## Browse the type definitions
-
-The custom types are reachable via the standard ObjectTypes
-folder:
-
-```text
-ObjectTypes (ns=0;i=88)
-└── BaseEventType
-    └── SimpleEventType        (ns=1;s=SimpleEventType)
-    └── ComplexEventType       (ns=1;s=ComplexEventType)
-    └── SystemStatusEventType  (ns=1;s=SystemStatusEventType)
-```
-
-Reading the type's `DataTypeDefinition` returns the field list
-— useful for type-aware decoders.
+`SystemEventType` always uses `Severity = 100`, so a `>= 300`
+filter excludes it.
 
 ## Test patterns
 
 ### Basic — does anything arrive?
 
 Subscribe with the select clause above. Wait 2 s. Assert at
-least one event arrived.
+least one event arrived. After ~10 s you should have seen events
+from all three timers.
 
 ### Counter increments
 
-The `Message` field for `SimpleEventType` is
-`"Periodic event #N"` where `N` increments. Track `N` across
-notifications, verify it increments by 1 each time.
+The `Message` field for timer-#1 events is
+`"Simple event #N"` where `N` increments by 1. Parse it out of
+the `LocalizedText.Text`, track `N` across notifications, and
+verify monotonicity. Note `N` resets to 1 every time the
+container restarts.
 
 ### Type filter precision
 
-| Filter                       | Expected (over 10 s)            |
-| ---------------------------- | ------------------------------- |
-| No filter                    | ~5 Simple + ~2 Complex + ~1 SystemStatus |
-| `OfType(SimpleEventType)`    | ~5 events                       |
-| `OfType(SystemStatusEventType)` | ~1 event                     |
+Over a 10 s window after the first emission:
+
+| Filter                          | Expected (~10 s)            |
+| ------------------------------- | --------------------------- |
+| No filter                       | ~5 from #1, ~2 from #2, ~1 from #3 |
+| `OfType(BaseEventType)`         | ~7 (timers #1 and #2)       |
+| `OfType(SystemEventType)`       | ~1 (timer #3)               |
 
 ### Severity threshold
 
-Subscribe with `Severity >= 250` and observe the mix:
-
-| Type                       | Severity | Passes? |
-| -------------------------- | -------- | ------- |
-| `SimpleEventType`          | 200      | No       |
-| `ComplexEventType`         | 300      | Yes      |
-| `SystemStatusEventType` (normal) | 100 | No   |
-| `SystemStatusEventType` (Maintenance) | 600 | Yes |
-
-### On-demand verification
-
-```text
-subscribe (filter = OfType(BaseEventType), severity >= 700)
-call Methods/GenerateEvent("test", 750)
-→ exactly one event arrives with Message="test", Severity=750
-```
+| Timer                       | Severity | Passes `Severity >= 300`? |
+| --------------------------- | -------- | -------------------------- |
+| #1 (`BaseEventType`)        | 200      | No                          |
+| #2 (`BaseEventType`)        | 500      | Yes                         |
+| #3 (`SystemEventType`)      | 100      | No                          |
 
 ## How the source node interacts
 
-Events have a `SourceNode` field. For the suite's events:
+| Timer | `SourceNode` value          | `SourceName`     |
+| ----- | --------------------------- | ----------------|
+| #1    | `Events/EventEmitter`       | `EventEmitter`  |
+| #2    | `Events/EventEmitter`       | `EventEmitter`  |
+| #3    | `Events/EventEmitter`       | `SystemMonitor` |
 
-| Type                       | SourceNode value          |
-| -------------------------- | ------------------------- |
-| `SimpleEventType`          | `Events/EventEmitter`     |
-| `ComplexEventType`         | `Events/EventEmitter`     |
-| `SystemStatusEventType`    | `Server` node             |
-| `GenerateEvent`-raised     | `Server` node             |
-
-You can subscribe on `Server` (catches everything) or on
-`EventEmitter` (catches only the first two types). Tests
-typically subscribe on `Server` for simplicity.
+All three events list `EventEmitter` as their `SourceNode`. The
+`SourceName` for timer #3 is the string `"SystemMonitor"` but
+the source node id is still the `EventEmitter` object — there is
+no separate `SystemMonitor` node in the address space.
 
 ## Where to read next
 
-- [Alarms](./alarms.md) — alarm-style events with state machines.
+- [Alarms](./alarms.md) — the `Alarms` folder, which uses real
+  `ExclusiveLimitAlarmState` / `NonExclusiveLimitAlarmState` /
+  `OffNormalAlarmState` nodes instead of standalone events.
 - [Subscription and method tests](../testing-patterns/subscription-and-method-tests.md) —
-  the recipes.
+  end-to-end test recipes.

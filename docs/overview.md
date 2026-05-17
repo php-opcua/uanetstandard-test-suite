@@ -55,14 +55,16 @@ same stack (Siemens, Beckhoff, KEPServer, …).
 
 ## Address space — what's in it
 
-Each of the 10 classic servers exposes the same ~300-node tree:
+Each of the 10 classic servers exposes the same ~200-node
+custom address space (plus the standard `ns=0` framework nodes
+that every UA-.NETStandard server ships):
 
 - 21 scalar data types × {RW, RO} variants
 - 20 RW arrays + 14 empty arrays + 6 RO arrays
 - 3 multi-dimensional matrices (2D and 3D)
 - 12 callable methods (arithmetic, strings, arrays, async, failures)
 - 13 dynamic variables (counters, waves, random)
-- 3 custom event types with periodic emission
+- 3 periodic standard `BaseEventState` event timers (no custom event types)
 - 3 alarms (exclusive limit, non-exclusive limit, off-normal)
 - 4 historical variables (1-second recording, 10 000-sample buffer)
 - Structured objects (nested up to 10 levels)
@@ -85,7 +87,11 @@ For GitHub Actions this is one step:
 
 <!-- @code-block language="text" label=".github/workflows/test.yml" -->
 ```text
-- uses: php-opcua/uanetstandard-test-suite@v1.2.0
+# Pin to a tag (e.g. @v1.2.0) once you've verified one exists for
+# your fork; @master tracks the bleeding edge. There is no
+# guarantee a v1.2.0 tag exists in upstream — check
+# https://github.com/php-opcua/uanetstandard-test-suite/tags
+- uses: php-opcua/uanetstandard-test-suite@master
 
 - run: cargo test  # or pytest, npm test, dotnet test, …
 ```

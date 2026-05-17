@@ -20,12 +20,12 @@ server then filters the browse to only that view's members.
 
 ## The views
 
-| BrowseName        | Contains                                  | Use case                                |
-| ----------------- | ----------------------------------------- | --------------------------------------- |
-| `OperatorView`    | `Dynamic`, `Methods`, `Alarms`            | Operator dashboards                     |
-| `EngineeringView` | Everything under `TestServer`              | Full engineering / debug access         |
-| `HistoricalView`  | `Historical`                              | Trend / history clients                 |
-| `DataView`        | `DataTypes`, `Structures`                 | Data inspection / configuration         |
+| BrowseName        | Contains (target folders)                                | Use case                                |
+| ----------------- | -------------------------------------------------------- | --------------------------------------- |
+| `OperatorView`    | `TestServer/Dynamic`, `TestServer/Methods`, `TestServer/Alarms` | Operator dashboards                   |
+| `EngineeringView` | `TestServer` (the whole subtree)                         | Full engineering / debug access         |
+| `HistoricalView`  | `TestServer/Historical`                                  | Trend / history clients                 |
+| `DataView`        | `TestServer/DataTypes`, `TestServer/Structures`, `TestServer/ExtensionObjects` | Data inspection / configuration |
 
 ## Why views
 

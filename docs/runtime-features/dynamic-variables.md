@@ -22,11 +22,11 @@ All `accessLevel = CurrentRead`. Writes are rejected.
 
 ## Counters
 
-| BrowseName     | Type    | Update interval | Behaviour                                  |
-| -------------- | ------- | --------------- | ------------------------------------------ |
-| `Counter`       | UInt32 | 1 s             | Increments by 1, starts at 0               |
-| `FastCounter`   | UInt32 | 100 ms          | Increments by 1, starts at 0               |
-| `SlowCounter`   | UInt32 | 10 s            | Increments by 1, starts at 0               |
+| BrowseName     | Type    | Update interval | Behaviour                                                            |
+| -------------- | ------- | --------------- | -------------------------------------------------------------------- |
+| `Counter`       | UInt32 | 1 s             | Initial value `0`; first observed value is `1` (incremented before publish) |
+| `FastCounter`   | UInt32 | 100 ms          | Initial value `0`; first observed value is `1`                       |
+| `SlowCounter`   | UInt32 | 10 s            | Initial value `0`; first observed value is `1`                       |
 
 Use cases:
 
@@ -38,11 +38,11 @@ Use cases:
 
 ## Random values
 
-| BrowseName       | Type    | Update interval | Range                              |
-| ---------------- | ------- | --------------- | ---------------------------------- |
-| `Random`         | Double  | 500 ms          | `[0.0, 1.0)`                        |
-| `RandomInt`      | Int32   | 1 s             | `[-1000, 1000]`                     |
-| `RandomString`   | String  | 2 s             | 8–24 alphanumeric chars            |
+| BrowseName       | Type    | Update interval | Range / values                                                  |
+| ---------------- | ------- | --------------- | --------------------------------------------------------------- |
+| `Random`         | Double  | 500 ms          | `[0.0, 1.0)`                                                    |
+| `RandomInt`      | Int32   | 1 s             | `[-1000, 1000]` (inclusive)                                     |
+| `RandomString`   | String  | 1 s             | One of `["alpha", "bravo", "charlie", "delta", "echo", "foxtrot"]` |
 
 Useful for:
 
@@ -53,37 +53,45 @@ Useful for:
 
 ## Waveforms
 
-| BrowseName     | Type    | Period | Formula                                    |
-| -------------- | ------- | ------ | ------------------------------------------ |
-| `SineWave`     | Double  | 10 s   | `sin(2π · t / 10)`, range `[-1, 1]`         |
-| `SawTooth`     | Double  | 5 s    | `(t % 5) / 5`, range `[0, 1)`               |
-| `Square`        | Boolean | 2 s    | `true` for 1 s, `false` for 1 s            |
-| `TriangleWave` | Double  | 8 s    | Linear ramp `-1 → 1 → -1`                  |
+| BrowseName     | Type    | Period | Formula                                                |
+| -------------- | ------- | ------ | ------------------------------------------------------ |
+| `SineWave`     | Double  | 10 s   | `sin(2π · t / 10)`, range `[-1, 1]`                    |
+| `SawTooth`     | Double  | 10 s   | `(t % 10) / 10`, range `[0, 1)`                        |
+| `Square`        | Boolean | 10 s   | `(int)(t / 5) % 2 == 0` — flips every 5 s              |
+| `TriangleWave` | Double  | 10 s   | Linear ramp `0 → 1 → 0` over the 10 s period           |
 
-Waveforms are **computed on read** (no timer-driven update).
-Each read returns the current value at that instant. That makes
-them ideal for deadband tests (subscribe with deadband ε, count
-notifications, compare to expected crossings).
+Waveforms are written to the address space by the **500 ms timer**
+in `DynamicBuilder.cs`; they are not recomputed on read. Each
+read returns whatever value the last tick wrote. The deterministic
+period for every waveform is 10 s — the timer ticks twice per
+second, sampling the formula and pushing the new value into the
+node, so subscriptions with shorter `samplingInterval` than 500 ms
+will still only see two distinct values per second.
 
 ## Timestamps
 
-| BrowseName    | Type      | Behaviour                              |
-| ------------- | --------- | -------------------------------------- |
-| `Timestamp`   | DateTime  | Current server time on every read      |
+| BrowseName    | Type      | Update interval | Behaviour                                       |
+| ------------- | --------- | --------------- | ----------------------------------------------- |
+| `Timestamp`   | DateTime  | 1 s             | The 1 s timer writes `DateTime.UtcNow` into the value |
 
-`Timestamp` always returns a fresh value. Useful to verify that:
+`Timestamp` is not recomputed per read — it is refreshed by the
+1 s timer like the counters. Two reads less than ~1 s apart will
+typically see the same value. Useful to verify that:
 
-- Your client gets a new value on every poll.
-- `sourceTimestamp` in the DataValue is current (the server
-  populates it).
+- `sourceTimestamp` in the DataValue tracks the value (the server
+  sets it).
+- The value visibly progresses across the second boundary.
 
 ## Status cycling
 
-| BrowseName       | Type        | Update interval | Cycle                                          |
-| ---------------- | ----------- | --------------- | ---------------------------------------------- |
-| `StatusVariable` | StatusCode  | 3 s             | `Good` → `Bad_CommunicationError` → `Uncertain_LastUsableValue` → repeat |
+| BrowseName       | Type        | Update interval | Behaviour                                                       |
+| ---------------- | ----------- | --------------- | ---------------------------------------------------------------- |
+| `StatusVariable` | StatusCode  | 1 s             | Picks one of `Good`, `Uncertain`, `Bad` uniformly at random per tick |
 
-Use this to verify your client interprets:
+`StatusVariable` is **not** a deterministic three-state cycle — every
+tick draws independently from the three top-level status codes.
+Across a long enough window you will see all three, but not in a
+fixed order. Use it to verify your client interprets:
 
 - `Good` (`0x00xxxxxx`) — normal value
 - `Bad` (`0x80xxxxxx`) — error
@@ -95,14 +103,16 @@ each filter produces a different notification count.
 
 ## Nullable value
 
-| BrowseName        | Type    | Update interval | Behaviour                                          |
-| ----------------- | ------- | --------------- | -------------------------------------------------- |
-| `NullableDouble`  | Double  | 4 s             | Alternates `Good` (random in `[0, 100)`) ↔ `Bad_NoData` |
+| BrowseName        | Type    | Update interval | Behaviour                                                  |
+| ----------------- | ------- | --------------- | ---------------------------------------------------------- |
+| `NullableDouble`  | Double  | 500 ms          | ~20% of ticks set `StatusCode = Bad_NoData`; otherwise `Good` with value `rng.NextDouble() * 100` |
 
 Tests how your client handles values that intermittently have
-**no data**. When status is `Bad_NoData`, the value field may
-be 0 or default — your client should treat it as absent rather
-than as a real `0`.
+**no data**. The choice is probabilistic, not deterministic
+alternation — over a long enough sample you should see ~1
+`Bad_NoData` per 5 updates. When status is `Bad_NoData` the value
+field is left at whatever the previous tick wrote — your client
+should treat it as absent rather than as a real number.
 
 ## Subscription test recipes
 

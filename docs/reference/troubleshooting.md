@@ -74,12 +74,25 @@ Depends which side:
 
 ### `Bad_IdentityTokenRejected`
 
+Returned when the **token type itself** is not accepted by the
+endpoint. The credentials never reach validation.
+
 | Cause                                       | Fix                                            |
 | ------------------------------------------- | ---------------------------------------------- |
-| Wrong username/password                     | Check against `config/users.json`              |
-| Anonymous on a userpass-only server         | Provide credentials                            |
+| Anonymous on a server with `AllowAnonymous=false` | Provide username/password or a cert     |
+| UserName token on a server with `AuthUsers=false` | Use Anonymous (or the cert flow)         |
 | Cert auth on a non-cert server              | Use `opcua-certificate` (4842), `opcua-all-security` (4843), `opcua-auto-accept` (4845), `opcua-ecc-nist` (4848), or `opcua-ecc-brainpool` (4849) |
-| `opcua-no-security` with credentials        | This server only accepts Anonymous              |
+
+### `Bad_UserAccessDenied`
+
+Returned by the credential-validation step when the token type
+was accepted but the username/password combination failed.
+
+| Cause                                       | Fix                                            |
+| ------------------------------------------- | ---------------------------------------------- |
+| Wrong password                              | Check against `config/users.json`              |
+| Unknown username                            | Check against `config/users.json`              |
+| Writes from a `viewer`-role session on a role-protected node | Reconnect as `operator` or `admin` |
 
 ### `Bad_TooManyOperations` on Read
 
