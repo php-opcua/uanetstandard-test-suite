@@ -1,6 +1,6 @@
 # Changelog
 
-## v1.3.0 — TBD
+## v1.3.0 — 2026-05-26
 
 ### Added — File Transfer (Part 5) fixtures
 
