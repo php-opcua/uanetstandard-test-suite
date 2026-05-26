@@ -1,5 +1,17 @@
 # Changelog
 
+## v1.4.0 — 2026-05-26
+
+### Added — Reverse Connect (Part 6 §7.1.2.3) test methods
+
+- **`TestServerApp`** base class changed from `StandardServer` to `ReverseConnectServer` so the server-side `ReverseConnectManager` (UA-.NETStandard `Opc.Ua.Server.ReverseConnectServer.AddReverseConnection(Uri, …)` / `RemoveReverseConnection(Uri)`) is available at runtime. No behaviour change for the existing services — reverse connections are inert until a target is registered.
+- **`ReverseConnectMethodsBuilder`** under `src/TestServer/AddressSpace/` — opt-in via the new `EnableReverseConnect` config flag (default `true`). Adds a `TestServer/ReverseConnect` folder with **two Method nodes**:
+    - `ns=2;s=TestServer/ReverseConnect/StartReverseConnect(host: String, port: UInt16) → status: StatusCode` — calls `AddReverseConnection(new Uri("opc.tcp://{host}:{port}"))`; idempotent against double-add (treated as `Good`).
+    - `ns=2;s=TestServer/ReverseConnect/StopReverseConnect(host: String, port: UInt16) → status: StatusCode` — calls `RemoveReverseConnection(...)`; returns `BadNotFound` if the URL was not registered, `Good` otherwise.
+- **TestNodeManager** signature extended with a fifth ctor argument `TestServerApp testServer` so the Method handlers can reach the server-side reverse-connect API through the cast-free path. Empty-host / zero-port inputs both yield `BadInvalidArgument` without touching the underlying manager.
+- **Env-driven toggle** — `OPCUA_ENABLE_REVERSE_CONNECT` (default `true`). When disabled the `TestServer/ReverseConnect` folder is not built and the methods are absent.
+- Designed to drive the integration tests of `php-opcua/opcua-client-ext-reverse-connect`: the PHP client opens a listener on an ephemeral port, connects to the test server normally, calls `StartReverseConnect("127.0.0.1", <port>)`, and the server dials out and emits a ReverseHello (`RHE`) toward the listener.
+
 ## v1.3.0 — 2026-05-26
 
 ### Added — File Transfer (Part 5) fixtures

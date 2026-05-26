@@ -10,6 +10,7 @@ public class TestNodeManager : CustomNodeManager2
 {
     private readonly ServerConfig _config;
     private readonly UserManager _userManager;
+    private readonly TestServerApp _testServer;
     private readonly List<IDisposable> _timers = new();
 
     /// <summary>
@@ -21,11 +22,13 @@ public class TestNodeManager : CustomNodeManager2
         IServerInternal server,
         ApplicationConfiguration configuration,
         ServerConfig config,
-        UserManager userManager)
+        UserManager userManager,
+        TestServerApp testServer)
         : base(server, configuration, new[] { "urn:opcua:testserver:nodes", "http://opcfoundation.org/UA/DI/", "urn:opcua:test-server:custom-types" })
     {
         _config = config;
         _userManager = userManager;
+        _testServer = testServer;
     }
 
     /// <summary>
@@ -72,6 +75,18 @@ public class TestNodeManager : CustomNodeManager2
                 var methods = new MethodsBuilder(this, root, SystemContext);
                 methods.Build();
                 Console.WriteLine("  [+] Methods address space built");
+            }
+
+            if (_config.EnableReverseConnect)
+            {
+                var reverseConnect = new ReverseConnectMethodsBuilder(
+                    this,
+                    root,
+                    SystemContext,
+                    addReverseConnection: uri => _testServer.AddReverseConnection(uri),
+                    removeReverseConnection: uri => _testServer.RemoveReverseConnection(uri));
+                reverseConnect.Build();
+                Console.WriteLine("  [+] ReverseConnect address space built");
             }
 
             if (_config.EnableFileTransfer)

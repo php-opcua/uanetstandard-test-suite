@@ -6,7 +6,7 @@ using TestServer.UserManagement;
 
 namespace TestServer.Server;
 
-public class TestServerApp : StandardServer
+public class TestServerApp : ReverseConnectServer
 {
     private readonly ServerConfig _config;
     private readonly UserManager _userManager;
@@ -22,7 +22,7 @@ public class TestServerApp : StandardServer
     {
         var nodeManagers = new List<INodeManager>
         {
-            new TestNodeManager(server, configuration, _config, _userManager)
+            new TestNodeManager(server, configuration, _config, _userManager, this)
         };
 
         return new MasterNodeManager(server, configuration, null, nodeManagers.ToArray());

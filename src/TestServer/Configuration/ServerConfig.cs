@@ -40,6 +40,7 @@ public class ServerConfig
     public bool EnableStructures { get; set; } = true;
     public bool EnableViews { get; set; } = true;
     public bool EnableFileTransfer { get; set; } = true;
+    public bool EnableReverseConnect { get; set; } = true;
 
     // Operation Limits
     public int MaxNodesPerRead { get; set; } = 1000;
@@ -97,6 +98,7 @@ public class ServerConfig
         config.EnableStructures = GetEnvBool("OPCUA_ENABLE_STRUCTURES", config.EnableStructures);
         config.EnableViews = GetEnvBool("OPCUA_ENABLE_VIEWS", config.EnableViews);
         config.EnableFileTransfer = GetEnvBool("OPCUA_ENABLE_FILE_TRANSFER", config.EnableFileTransfer);
+        config.EnableReverseConnect = GetEnvBool("OPCUA_ENABLE_REVERSE_CONNECT", config.EnableReverseConnect);
 
         config.MaxNodesPerRead = GetEnvInt("OPCUA_MAX_NODES_PER_READ", config.MaxNodesPerRead);
         config.MaxNodesPerWrite = GetEnvInt("OPCUA_MAX_NODES_PER_WRITE", config.MaxNodesPerWrite);

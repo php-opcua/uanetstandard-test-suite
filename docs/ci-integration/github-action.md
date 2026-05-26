@@ -29,7 +29,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: php-opcua/uanetstandard-test-suite@v1.2.0
+      - uses: php-opcua/uanetstandard-test-suite@v1.4.0
 
       - run: cargo test     # or pytest, npm test, dotnet test, …
 ```
@@ -77,7 +77,7 @@ Smaller test runs save CI time:
 
 <!-- @code-block language="text" label="subset example" -->
 ```text
-- uses: php-opcua/uanetstandard-test-suite@v1.2.0
+- uses: php-opcua/uanetstandard-test-suite@v1.4.0
   with:
     servers: 'no-security,userpass'
 ```
@@ -101,7 +101,7 @@ Pass `certs-dir` to your test command:
 <!-- @code-block language="text" label="certificates passthrough" -->
 ```text
 - id: opcua
-  uses: php-opcua/uanetstandard-test-suite@v1.2.0
+  uses: php-opcua/uanetstandard-test-suite@v1.4.0
 
 - run: dotnet test
   env:
@@ -121,7 +121,7 @@ to each server.
 
 | Form                                                           | Recommendation                          |
 | -------------------------------------------------------------- | --------------------------------------- |
-| `@v1.2.0`                                                      | **Recommended for stability**           |
+| `@v1.4.0`                                                      | **Recommended for stability**           |
 | `@master`                                                      | Bleeding edge — may break               |
 | `@<sha>` (full git SHA)                                        | Maximum reproducibility (CI provenance) |
 
@@ -183,7 +183,7 @@ jobs:
         with: { php-version: '8.4' }
 
       - id: opcua
-        uses: php-opcua/uanetstandard-test-suite@v1.2.0
+        uses: php-opcua/uanetstandard-test-suite@v1.4.0
         with:
           servers: 'no-security,userpass,certificate,all-security,ecc-nist'
 
@@ -201,7 +201,7 @@ jobs:
         with: { php-version: '8.4' }
 
       - id: opcua
-        uses: php-opcua/uanetstandard-test-suite@v1.2.0
+        uses: php-opcua/uanetstandard-test-suite@v1.4.0
         with:
           servers: 'ecc-nist,ecc-brainpool'
 
