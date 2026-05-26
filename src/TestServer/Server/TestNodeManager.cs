@@ -42,6 +42,16 @@ public class TestNodeManager : CustomNodeManager2
         AddPredefinedNode(context, node);
     }
 
+    /// <summary>
+    /// Exposes DeleteNode to address space builders (it's protected in base class).
+    /// Used by FileDirectoryType callbacks for DeleteFileSystemObject and the
+    /// move side of MoveOrCopy.
+    /// </summary>
+    public bool DeleteDynamicNode(NodeId nodeId)
+    {
+        return DeleteNode(SystemContext, nodeId);
+    }
+
     public override void CreateAddressSpace(IDictionary<NodeId, IList<IReference>> externalReferences)
     {
         lock (Lock)
@@ -62,6 +72,13 @@ public class TestNodeManager : CustomNodeManager2
                 var methods = new MethodsBuilder(this, root, SystemContext);
                 methods.Build();
                 Console.WriteLine("  [+] Methods address space built");
+            }
+
+            if (_config.EnableFileTransfer)
+            {
+                var fileTransfer = new FileTransferBuilder(this, root, SystemContext, _userManager);
+                fileTransfer.Build();
+                Console.WriteLine("  [+] FileTransfer address space built");
             }
 
             if (_config.EnableDynamic)

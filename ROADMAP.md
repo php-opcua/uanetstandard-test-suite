@@ -2,6 +2,16 @@
 
 ## Blocked
 
+### File Transfer · `FileChangeEventType` / `FileAccessEventType` (Part 5 §8.2)
+
+**Status:** Blocked by upstream SDK limitation.
+
+**What:** Emit the Part 5 §8.2 event types from `FileTransferBuilder` — `FileChangeEventType` on `Write` / `EraseExisting` / runtime `CreateFile` / `DeleteFileSystemObject` / `MoveOrCopy`, and `FileAccessEventType` on `Open` / `Close`.
+
+**Why it's blocked:** the pinned `OPCFoundation.NetStandard.Opc.Ua.Server 1.5.378.134` does not include the generated state classes for either type. The assembly only ships the generic `AuditUpdate*EventType` family, whose semantics target operator-action logging rather than data-change notifications. Shipping a custom or audit-substitute type would force clients to hard-code vendor-specific NodeIds, defeating the suite's role as a portable Part 5 conformance target.
+
+Tracked client-side in `php-opcua/opcua-client` ROADMAP under **Blocked** as `FileChangeReceived` / `FileAccessReceived`.
+
 ### ECC Curve25519/448 Server (`ECC_curve25519`, `ECC_curve448`)
 
 **Status:** Blocked by upstream SDK limitation

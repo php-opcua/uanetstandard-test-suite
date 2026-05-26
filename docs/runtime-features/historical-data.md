@@ -6,8 +6,8 @@ see_also:
   - { href: './dynamic-variables.md',                       meta: '4 min' }
   - { href: '../testing-patterns/subscription-and-method-tests.md', meta: '5 min' }
 
-prev: { label: 'Alarms',  href: './alarms.md' }
-next: { label: 'Views',   href: '../special-features/views.md' }
+prev: { label: 'Alarms',         href: './alarms.md' }
+next: { label: 'File Transfer',  href: './file-transfer.md' }
 ---
 
 # Historical data

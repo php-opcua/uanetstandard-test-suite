@@ -71,6 +71,7 @@ error path. All other services keep the `1000` default.
 | `OPCUA_ENABLE_DYNAMIC`    | `true`  | Dynamic builder (13 time-varying vars)    |
 | `OPCUA_ENABLE_STRUCTURES` | `true`  | Structures builder (objects, nested)      |
 | `OPCUA_ENABLE_VIEWS`      | `true`  | Views builder                             |
+| `OPCUA_ENABLE_FILE_TRANSFER` | `true` | File Transfer builder (6 `FileType` nodes + 1 `FileDirectoryType` — see [Runtime features · File Transfer](../runtime-features/file-transfer.md)) |
 | `OPCUA_ENABLE_SKS`        | `false` | Security Key Service builder              |
 
 `OPCUA_ENABLE_SKS` is `true` only on the dedicated `opcua-sks`
@@ -147,6 +148,7 @@ OPCUA_ENABLE_METHODS=true
 OPCUA_ENABLE_DYNAMIC=true
 OPCUA_ENABLE_STRUCTURES=true
 OPCUA_ENABLE_VIEWS=true
+OPCUA_ENABLE_FILE_TRANSFER=true
 
 # Op limits (defaults match ServerConfig.cs)
 OPCUA_MAX_SESSIONS=100

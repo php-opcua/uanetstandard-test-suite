@@ -86,6 +86,7 @@ Objects (ns=0;i=85)
     ├── Historical         # 4 historized variables
     ├── Structures         # Nested objects, deep nesting
     ├── ExtensionObjects   # PointValue, RangeValue
+    ├── Files              # 6 FileType + 1 FileDirectoryType (Part 5 File Transfer)
     ├── AccessControl      # 50 access-mode test variables
     └── SecurityKeyService # Only on opcua-sks
 ```
@@ -109,7 +110,7 @@ Views are filtered perspectives of the address space — see
 
 ## Folder-level browse
 
-A single browse from `TestServer` returns the 9 (or 10 on SKS)
+A single browse from `TestServer` returns the 10 (or 11 on SKS)
 top-level folders:
 
 | Folder              | NodeId (string)                                |

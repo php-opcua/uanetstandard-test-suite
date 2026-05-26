@@ -117,6 +117,7 @@ variables:
 | `OPCUA_ENABLE_DYNAMIC=false`    | Dynamic variables                         |
 | `OPCUA_ENABLE_STRUCTURES=false` | Structures folder                         |
 | `OPCUA_ENABLE_VIEWS=false`      | Views                                     |
+| `OPCUA_ENABLE_FILE_TRANSFER=false` | Files folder (4 `FileType` nodes)        |
 
 All default to `true`. The 10 classic servers run with the full
 set enabled. A leaner server would disable the parts irrelevant
