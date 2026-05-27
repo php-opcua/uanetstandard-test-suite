@@ -1,5 +1,16 @@
 # Changelog
 
+## v1.5.0 — 2026-05-27
+
+### Added — HTTPS Binary endpoint (Part 6 §7.4.4)
+
+- **`opcua-https-binary`** docker-compose service — exposes both `opc.tcp://0.0.0.0:4862/UA/TestServer` (internal) and `opc.https://0.0.0.0:4852/UA/TestServer` (host-mapped) on the same TestServer process. Used by the integration suite of [`php-opcua/opcua-client-ext-transport-https`](https://github.com/php-opcua/opcua-client-ext-transport-https).
+- **`OPCFoundation.NetStandard.Opc.Ua.Bindings.Https` v1.5.378.134** added to `TestServer.csproj` — provides the `HttpsTransportListener` UA-.NETStandard wires for `opc.https://` endpoints.
+- **`EnableHttps` / `HttpsPort`** in `ServerConfig.cs` (default `false` / `4852`), env-driven via `OPCUA_ENABLE_HTTPS` and `OPCUA_HTTPS_PORT`. When enabled, `BuildBaseAddresses(config)` appends the `opc.https://0.0.0.0:{HttpsPort}{ResourcePath}` URI to the `BaseAddresses` collection.
+- **`ServerConfiguration.HttpsMutualTls = false`** — plain TLS (no client cert) is accepted on `CreateSession`. Production deployments should keep mTLS on; the test endpoint flips it off so the PHP client can connect without a TLS client cert.
+- **`OPCUA_AUTH_USERS=true`** on the `opcua-https-binary` service. UA-.NETStandard's `HttpsServiceHost` filters the Anonymous user token policy out of the HTTPS endpoint description whenever `HttpsMutualTls = false`, so the endpoint must advertise at least one non-anonymous policy. The HTTPS integration test connects with seeded `admin` / `admin123` credentials.
+- **Pre-generated RSA 2048 HTTPS server certificate** under `certs/https-server/` (CN `HttpsBinaryServer`, SAN `localhost` + `127.0.0.1` + `host.docker.internal` + `0.0.0.0`, EKU `serverAuth, clientAuth`). UA-.NETStandard's auto-generated application certificate defaults to 1024-bit RSA which modern TLS 1.2/1.3 rejects — `scripts/generate-certs.sh` now produces the stronger cert and `Program.cs::InstallPregeneratedHttpsCertificate(config)` copies it into `/tmp/pki/own/` with the expected `<CN> [<thumbprint>].der` / `.pfx` filename layout, computed dynamically via `X509Certificate2.Thumbprint`.
+
 ## v1.4.0 — 2026-05-26
 
 ### Added — Reverse Connect (Part 6 §7.1.2.3) test methods

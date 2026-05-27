@@ -26,6 +26,8 @@
     -->
     <PackageReference Include="OPCFoundation.NetStandard.Opc.Ua.Server" Version="1.5.378.134" />
     <PackageReference Include="OPCFoundation.NetStandard.Opc.Ua.Configuration" Version="1.5.378.134" />
+    <!-- Adds the opc.https:// binding (Part 6 §7.4 HTTPS mappings). Enabled when OPCUA_ENABLE_HTTPS=true. -->
+    <PackageReference Include="OPCFoundation.NetStandard.Opc.Ua.Bindings.Https" Version="1.5.378.134" />
     <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="8.0.*" />
   </ItemGroup>
 

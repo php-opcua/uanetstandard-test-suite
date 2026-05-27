@@ -87,9 +87,9 @@ For GitHub Actions this is one step:
 
 <!-- @code-block language="text" label=".github/workflows/test.yml" -->
 ```text
-# Pin to a tag (e.g. @v1.4.0) once you've verified one exists for
+# Pin to a tag (e.g. @v1.5.0) once you've verified one exists for
 # your fork; @master tracks the bleeding edge. There is no
-# guarantee a v1.4.0 tag exists in upstream — check
+# guarantee a v1.5.0 tag exists in upstream — check
 # https://github.com/php-opcua/uanetstandard-test-suite/tags
 - uses: php-opcua/uanetstandard-test-suite@master
 

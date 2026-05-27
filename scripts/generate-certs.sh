@@ -4,6 +4,7 @@ set -e
 CERTS_DIR="/certs"
 CA_DIR="$CERTS_DIR/ca"
 SERVER_DIR="$CERTS_DIR/server"
+HTTPS_SERVER_DIR="$CERTS_DIR/https-server"
 CLIENT_DIR="$CERTS_DIR/client"
 TRUSTED_DIR="$CERTS_DIR/trusted"
 REJECTED_DIR="$CERTS_DIR/rejected"
@@ -12,7 +13,7 @@ EXPIRED_DIR="$CERTS_DIR/expired"
 PKI_DIR="$CERTS_DIR/pki"
 
 # Skip if already generated
-if [ -f "$CA_DIR/ca-cert.pem" ] && [ -f "$SERVER_DIR/cert.pem" ] && [ -f "$CLIENT_DIR/cert.pem" ]; then
+if [ -f "$CA_DIR/ca-cert.pem" ] && [ -f "$SERVER_DIR/cert.pem" ] && [ -f "$CLIENT_DIR/cert.pem" ] && [ -f "$HTTPS_SERVER_DIR/cert.pem" ]; then
     echo "Certificates already exist, skipping generation."
     exit 0
 fi
@@ -22,7 +23,7 @@ echo "=== Generating OPC UA Test Certificates ==="
 apk add --no-cache openssl > /dev/null 2>&1 || true
 
 # Create directories
-for dir in "$CA_DIR" "$SERVER_DIR" "$CLIENT_DIR" "$TRUSTED_DIR" "$REJECTED_DIR" \
+for dir in "$CA_DIR" "$SERVER_DIR" "$HTTPS_SERVER_DIR" "$CLIENT_DIR" "$TRUSTED_DIR" "$REJECTED_DIR" \
            "$SELF_SIGNED_DIR" "$EXPIRED_DIR" \
            "$PKI_DIR/trusted/certs" "$PKI_DIR/trusted/crl" \
            "$PKI_DIR/issuers/certs" "$PKI_DIR/issuers/crl" \
@@ -107,6 +108,49 @@ openssl rsa -in "$SERVER_DIR/key.pem" -outform DER -out "$SERVER_DIR/key.der"
 # Create PFX (for .NET) - empty password
 openssl pkcs12 -export -out "$SERVER_DIR/server.pfx" \
     -inkey "$SERVER_DIR/key.pem" -in "$SERVER_DIR/cert.pem" \
+    -certfile "$CA_DIR/ca-cert.pem" -passout pass:
+
+# ============================================
+# 2b. HTTPS Server Certificate (Part 6 §7.4)
+# RSA 2048 with CN=HttpsBinaryServer and SAN matching localhost/127.0.0.1,
+# used by the opcua-https-binary service. UA-.NETStandard's auto-generated
+# server cert defaults to 1024-bit RSA, which modern TLS 1.2/1.3 reject —
+# we pre-generate a stronger one and install it into the cert store at
+# container start.
+# ============================================
+echo "--- Generating HTTPS Server certificate ---"
+
+cat > /tmp/https-server-ext.cnf << 'EXTEOF'
+[v3_req]
+basicConstraints = CA:FALSE
+keyUsage = digitalSignature, keyEncipherment, dataEncipherment, nonRepudiation
+extendedKeyUsage = serverAuth, clientAuth
+subjectAltName = @alt_names
+
+[alt_names]
+URI.1 = urn:opcua:testserver:nodes
+DNS.1 = localhost
+DNS.2 = opcua-https-binary
+DNS.3 = host.docker.internal
+IP.1 = 127.0.0.1
+IP.2 = 0.0.0.0
+EXTEOF
+
+openssl genrsa -out "$HTTPS_SERVER_DIR/key.pem" 2048
+
+openssl req -new -key "$HTTPS_SERVER_DIR/key.pem" -out /tmp/https-server.csr \
+    -subj "/C=US/ST=Test/L=TestCity/O=OPC UA Test Suite/OU=HTTPS/CN=HttpsBinaryServer"
+
+openssl x509 -req -days 3650 -in /tmp/https-server.csr \
+    -CA "$CA_DIR/ca-cert.pem" -CAkey "$CA_DIR/ca-key.pem" -CAcreateserial \
+    -out "$HTTPS_SERVER_DIR/cert.pem" \
+    -extfile /tmp/https-server-ext.cnf -extensions v3_req
+
+openssl x509 -in "$HTTPS_SERVER_DIR/cert.pem" -outform DER -out "$HTTPS_SERVER_DIR/cert.der"
+openssl rsa -in "$HTTPS_SERVER_DIR/key.pem" -outform DER -out "$HTTPS_SERVER_DIR/key.der"
+
+openssl pkcs12 -export -out "$HTTPS_SERVER_DIR/server.pfx" \
+    -inkey "$HTTPS_SERVER_DIR/key.pem" -in "$HTTPS_SERVER_DIR/cert.pem" \
     -certfile "$CA_DIR/ca-cert.pem" -passout pass:
 
 # ============================================

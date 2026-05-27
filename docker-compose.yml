@@ -294,7 +294,36 @@ services:
         condition: service_completed_successfully
     restart: unless-stopped
 
-  # === Server 12: PubSub UDP + UADP Publisher (Port 4850 internal) ===
+  # === Server 12: HTTPS Binary (Part 6 §7.4.4, Port 4852) ===
+  # Exposes both opc.tcp:// and opc.https:// on the same TestServer process.
+  # The HTTPS endpoint serves the binary encoding (application/opcua+uabinary)
+  # over TLS on the OPCUA_HTTPS_PORT. Used by the integration tests of
+  # php-opcua/opcua-client-ext-transport-https.
+  opcua-https-binary:
+    build: .
+    ports:
+      - "4862:4862"
+      - "4852:4852"
+    volumes:
+      - ./certs:/app/certs
+      - ./config:/app/config:ro
+    environment:
+      OPCUA_PORT: "4862"
+      OPCUA_SERVER_NAME: "HttpsBinaryServer"
+      OPCUA_SECURITY_POLICIES: "None"
+      OPCUA_SECURITY_MODES: "None"
+      OPCUA_ALLOW_ANONYMOUS: "true"
+      OPCUA_AUTH_USERS: "true"
+      OPCUA_AUTH_CERTIFICATE: "false"
+      OPCUA_AUTO_ACCEPT_CERTS: "true"
+      OPCUA_ENABLE_HTTPS: "true"
+      OPCUA_HTTPS_PORT: "4852"
+    depends_on:
+      certs-generator:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  # === Server 13: PubSub UDP + UADP Publisher (Port 4850 internal) ===
   # UA-.NETStandard publisher emitting a deterministic DataSet every
   # 500 ms. Sends unicast UADP to the companion `opcua-pubsub-relay`
   # sidecar on the shared `pubsub-net` bridge; the relay forwards to the

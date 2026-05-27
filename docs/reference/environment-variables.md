@@ -73,6 +73,8 @@ error path. All other services keep the `1000` default.
 | `OPCUA_ENABLE_VIEWS`      | `true`  | Views builder                             |
 | `OPCUA_ENABLE_FILE_TRANSFER` | `true` | File Transfer builder (6 `FileType` nodes + 1 `FileDirectoryType` — see [Runtime features · File Transfer](../runtime-features/file-transfer.md)) |
 | `OPCUA_ENABLE_REVERSE_CONNECT` | `true` | Reverse Connect Method builder (`StartReverseConnect`, `StopReverseConnect` — see [Runtime features · Reverse Connect](../runtime-features/reverse-connect.md)) |
+| `OPCUA_ENABLE_HTTPS`           | `false` | Adds `opc.https://0.0.0.0:{OPCUA_HTTPS_PORT}{ResourcePath}` to `BaseAddresses` and installs the pre-generated RSA 2048 HTTPS certificate. See [Runtime features · HTTPS Binary](../runtime-features/https-binary.md). |
+| `OPCUA_HTTPS_PORT`             | `4852`  | TCP port for the `opc.https://` endpoint when `OPCUA_ENABLE_HTTPS=true`. |
 | `OPCUA_ENABLE_SKS`        | `false` | Security Key Service builder              |
 
 `OPCUA_ENABLE_SKS` is `true` only on the dedicated `opcua-sks`
@@ -151,6 +153,8 @@ OPCUA_ENABLE_STRUCTURES=true
 OPCUA_ENABLE_VIEWS=true
 OPCUA_ENABLE_FILE_TRANSFER=true
 OPCUA_ENABLE_REVERSE_CONNECT=true
+OPCUA_ENABLE_HTTPS=false
+OPCUA_HTTPS_PORT=4852
 
 # Op limits (defaults match ServerConfig.cs)
 OPCUA_MAX_SESSIONS=100

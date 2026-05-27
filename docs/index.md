@@ -32,6 +32,7 @@
   - [Historical data](./runtime-features/historical-data.md)
   - [File Transfer](./runtime-features/file-transfer.md)
   - [Reverse Connect](./runtime-features/reverse-connect.md)
+  - [HTTPS Binary](./runtime-features/https-binary.md)
 - Special features
   - [Views](./special-features/views.md)
   - [Security Key Service](./special-features/security-key-service.md)

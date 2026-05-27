@@ -42,6 +42,11 @@ public class ServerConfig
     public bool EnableFileTransfer { get; set; } = true;
     public bool EnableReverseConnect { get; set; } = true;
 
+    // HTTPS mapping (Part 6 §7.4). Off by default; the dedicated opcua-https-binary
+    // service in docker-compose flips it on with its own port.
+    public bool EnableHttps { get; set; } = false;
+    public int HttpsPort { get; set; } = 4852;
+
     // Operation Limits
     public int MaxNodesPerRead { get; set; } = 1000;
     public int MaxNodesPerWrite { get; set; } = 1000;
@@ -99,6 +104,8 @@ public class ServerConfig
         config.EnableViews = GetEnvBool("OPCUA_ENABLE_VIEWS", config.EnableViews);
         config.EnableFileTransfer = GetEnvBool("OPCUA_ENABLE_FILE_TRANSFER", config.EnableFileTransfer);
         config.EnableReverseConnect = GetEnvBool("OPCUA_ENABLE_REVERSE_CONNECT", config.EnableReverseConnect);
+        config.EnableHttps = GetEnvBool("OPCUA_ENABLE_HTTPS", config.EnableHttps);
+        config.HttpsPort = GetEnvInt("OPCUA_HTTPS_PORT", config.HttpsPort);
 
         config.MaxNodesPerRead = GetEnvInt("OPCUA_MAX_NODES_PER_READ", config.MaxNodesPerRead);
         config.MaxNodesPerWrite = GetEnvInt("OPCUA_MAX_NODES_PER_WRITE", config.MaxNodesPerWrite);
