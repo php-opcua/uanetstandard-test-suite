@@ -11,10 +11,20 @@ public static class Program
 {
     public static async Task<int> Main(string[] args)
     {
-        // Health check: just exit 0 if --health flag is passed
+        // Health check: report healthy only once the server has signalled
+        // readiness (Running state + endpoints accepting). Returning 0
+        // unconditionally let `docker compose --wait` race the boot window,
+        // surfacing BadServerHalted (0x800E0000) to the first client connects.
         if (args.Length > 0 && args[0] == "--health")
         {
-            return 0;
+            return File.Exists(TestServerApp.ReadyMarkerPath) ? 0 : 1;
+        }
+
+        // Clear any stale readiness marker from a previous run before booting,
+        // so a restarted container is not reported healthy prematurely.
+        if (File.Exists(TestServerApp.ReadyMarkerPath))
+        {
+            File.Delete(TestServerApp.ReadyMarkerPath);
         }
 
         var config = ServerConfig.FromEnvironment();

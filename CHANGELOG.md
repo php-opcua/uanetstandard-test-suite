@@ -1,5 +1,12 @@
 # Changelog
 
+## v1.5.1 — 2026-06-04
+
+### Fixed — Container readiness / healthcheck
+
+- **`--health` now gates on a real readiness marker** instead of unconditionally returning 0. `TestServerApp.OnServerStarted` writes `/tmp/opcua-ready` only once the server reaches the Running state and its endpoints accept requests; `dotnet TestServer.dll --health` returns exit 1 until that file exists. Previously the healthcheck returned 0 immediately, so `docker compose up --wait` reported the container healthy during the server boot window — the first client connects could race initialization and receive a top-level ServiceFault `BadServerHalted` (`0x800E0000`). This affected fast-connecting integration suites such as [`php-opcua/opcua-client-ext-reverse-connect`](https://github.com/php-opcua/opcua-client-ext-reverse-connect), whose first two tests connected within ~1s of the (premature) healthy signal.
+- **Stale marker cleared on boot** — `Program.cs` deletes any leftover `/tmp/opcua-ready` before starting, so a restarted container (`restart: unless-stopped`) is never reported healthy prematurely.
+
 ## v1.5.0 — 2026-05-27
 
 ### Added — HTTPS Binary endpoint (Part 6 §7.4.4)

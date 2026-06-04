@@ -8,6 +8,14 @@ namespace TestServer.Server;
 
 public class TestServerApp : ReverseConnectServer
 {
+    // Readiness marker file written once the server reaches the Running state
+    // and its endpoints accept requests. The container healthcheck
+    // (`dotnet TestServer.dll --health`) probes this file instead of blindly
+    // returning 0, so `docker compose up --wait` only reports healthy once the
+    // OPC UA server actually serves requests. Without it the first client
+    // connect can race the boot window and receive BadServerHalted (0x800E0000).
+    public const string ReadyMarkerPath = "/tmp/opcua-ready";
+
     private readonly ServerConfig _config;
     private readonly UserManager _userManager;
 
@@ -52,6 +60,17 @@ public class TestServerApp : ReverseConnectServer
 
         // Register user identity validation via the ImpersonateUser event
         server.SessionManager.ImpersonateUser += SessionManager_ImpersonateUser;
+
+        // Signal readiness only now that the server is Running and its
+        // endpoints accept requests. The healthcheck gates on this file.
+        try
+        {
+            File.WriteAllText(ReadyMarkerPath, "ready");
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Failed to write readiness marker: {ex.Message}");
+        }
     }
 
     private void SessionManager_ImpersonateUser(object? sender, ImpersonateEventArgs args)
