@@ -35,6 +35,22 @@ public class ExtensionObjectsBuilder
         };
         _mgr.AddNode(_context, pointType);
 
+        // Expose the DataTypeDefinition attribute (OPC UA 1.04+) so clients
+        // can discover the structure layout without the legacy type dictionary
+        var pointEncodingIdForDef = new NodeId(3010, ctNs);
+        pointType.DataTypeDefinition = new ExtensionObject(new StructureDefinition
+        {
+            DefaultEncodingId = pointEncodingIdForDef,
+            BaseDataType = DataTypeIds.Structure,
+            StructureType = StructureType.Structure,
+            Fields = new StructureFieldCollection
+            {
+                new StructureField { Name = "X", DataType = DataTypeIds.Double, ValueRank = ValueRanks.Scalar },
+                new StructureField { Name = "Y", DataType = DataTypeIds.Double, ValueRank = ValueRanks.Scalar },
+                new StructureField { Name = "Z", DataType = DataTypeIds.Double, ValueRank = ValueRanks.Scalar }
+            }
+        });
+
         // Binary encoding node for TestPointXYZ
         var pointEncodingId = new NodeId(3010, ctNs);
         var pointEncoding = new BaseObjectState(null)
@@ -45,7 +61,9 @@ public class ExtensionObjectsBuilder
             DisplayName = new LocalizedText("en", "Default Binary"),
             TypeDefinitionId = ObjectTypeIds.DataTypeEncodingType
         };
-        pointType.AddChild(pointEncoding);
+        // Per spec the encoding node is linked via HasEncoding, not as a component
+        pointType.AddReference(ReferenceTypeIds.HasEncoding, false, pointEncoding.NodeId);
+        pointEncoding.AddReference(ReferenceTypeIds.HasEncoding, true, pointType.NodeId);
         _mgr.AddNode(_context, pointEncoding);
 
         // Create custom DataType node for TestRangeStruct
@@ -61,6 +79,20 @@ public class ExtensionObjectsBuilder
         };
         _mgr.AddNode(_context, rangeType);
 
+        var rangeEncodingIdForDef = new NodeId(3011, ctNs);
+        rangeType.DataTypeDefinition = new ExtensionObject(new StructureDefinition
+        {
+            DefaultEncodingId = rangeEncodingIdForDef,
+            BaseDataType = DataTypeIds.Structure,
+            StructureType = StructureType.Structure,
+            Fields = new StructureFieldCollection
+            {
+                new StructureField { Name = "Low", DataType = DataTypeIds.Double, ValueRank = ValueRanks.Scalar },
+                new StructureField { Name = "High", DataType = DataTypeIds.Double, ValueRank = ValueRanks.Scalar },
+                new StructureField { Name = "Value", DataType = DataTypeIds.Double, ValueRank = ValueRanks.Scalar }
+            }
+        });
+
         // Binary encoding node for TestRangeStruct
         var rangeEncodingId = new NodeId(3011, ctNs);
         var rangeEncoding = new BaseObjectState(null)
@@ -71,7 +103,8 @@ public class ExtensionObjectsBuilder
             DisplayName = new LocalizedText("en", "Default Binary"),
             TypeDefinitionId = ObjectTypeIds.DataTypeEncodingType
         };
-        rangeType.AddChild(rangeEncoding);
+        rangeType.AddReference(ReferenceTypeIds.HasEncoding, false, rangeEncoding.NodeId);
+        rangeEncoding.AddReference(ReferenceTypeIds.HasEncoding, true, rangeType.NodeId);
         _mgr.AddNode(_context, rangeEncoding);
 
         // PointValue variable - contains binary-encoded ExtensionObject (3 doubles: 1.5, 2.5, 3.5)
