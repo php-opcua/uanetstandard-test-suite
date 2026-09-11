@@ -68,7 +68,7 @@ error path. All other services keep the `1000` default.
 | `OPCUA_ENABLE_HISTORICAL` | `true`  | Historical builder + 4 historized vars    |
 | `OPCUA_ENABLE_EVENTS`     | `true`  | Events + alarms builder                   |
 | `OPCUA_ENABLE_METHODS`    | `true`  | Methods builder (12 methods)              |
-| `OPCUA_ENABLE_DYNAMIC`    | `true`  | Dynamic builder (13 time-varying vars)    |
+| `OPCUA_ENABLE_DYNAMIC`    | `true`  | Dynamic builder (13 time-varying vars) + InfoBits (4 fixed-status vars) |
 | `OPCUA_ENABLE_STRUCTURES` | `true`  | Structures builder (objects, nested)      |
 | `OPCUA_ENABLE_VIEWS`      | `true`  | Views builder                             |
 | `OPCUA_ENABLE_FILE_TRANSFER` | `true` | File Transfer builder (6 `FileType` nodes + 1 `FileDirectoryType` — see [Runtime features · File Transfer](../runtime-features/file-transfer.md)) |

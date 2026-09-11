@@ -271,6 +271,21 @@ Dynamic/StatusVariable   StatusCode  3s timer     cycles: Good -> BadCommunicati
 Dynamic/NullableDouble   Double      4s timer     alternates Good(random 0-100) / BadNoData
 ```
 
+### InfoBits — 4 R variables
+
+```
+PATH                     TYPE        VALUE   STATUSCODE   MEANING
+InfoBits/NoLimit         Double      50.0    0x00000000   Good, no InfoBits
+InfoBits/LimitLow        Double      0.0     0x00000500   Good + InfoType=DataValue + LimitBits=Low
+InfoBits/LimitHigh       Double      100.0   0x00000600   Good + InfoType=DataValue + LimitBits=High
+InfoBits/LimitConstant   Double      42.0    0x00000700   Good + InfoType=DataValue + LimitBits=Constant
+```
+
+Values and status codes are fixed — a single Read is enough. Built with the Dynamic address space (`EnableDynamic`).
+Queue-overflow InfoBits need no dedicated node: monitor `Dynamic/FastCounter` with `queueSize > 1` and a publishing
+interval longer than the queue can absorb; the stack sets `0x00000480` on the first value after the gap. With
+`queueSize = 1` the bit is never set.
+
 ### Events — 3 custom types + 1 emitter
 
 ```
@@ -414,6 +429,7 @@ src/TestServer/
     ├── DynamicBuilder.cs             Timer-based and on-read variables
     ├── EventsAlarmsBuilder.cs        Event types + emitter + alarm instances
     ├── HistoricalBuilder.cs          4 vars + history recording (1000ms interval)
+    ├── InfoBitsBuilder.cs            Fixed-status variables carrying DataValue LimitBits
     ├── StructuresBuilder.cs          Objects with child variables, nesting
     ├── ExtensionObjectsBuilder.cs    Binary-encoded custom types (ns=3)
     ├── AccessControlBuilder.cs       Access levels + role folders + AllCombinations

@@ -110,6 +110,7 @@ NodeIds in `ns=1` follow these conventions:
 | Variable (Array)                                     | `ns=1;s=TestServer/DataTypes/Array/Int32Array`        |
 | Method                                                | `ns=1;s=TestServer/Methods/Add`                        |
 | Dynamic                                              | `ns=1;s=TestServer/Dynamic/Counter`                    |
+| InfoBits (LimitBits)                                 | `ns=1;s=TestServer/InfoBits/LimitHigh`                 |
 | Event source                                          | `ns=1;s=TestServer/Events/EventEmitter`                |
 | Alarm                                                | `ns=1;s=TestServer/Alarms/HighTemperatureAlarm`        |
 | History                                              | `ns=1;s=TestServer/Historical/HistoricalTemperature`   |

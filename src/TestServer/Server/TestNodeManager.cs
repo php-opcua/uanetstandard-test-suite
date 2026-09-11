@@ -101,6 +101,10 @@ public class TestNodeManager : CustomNodeManager2
                 var dynamic_ = new DynamicBuilder(this, root, SystemContext);
                 dynamic_.Build(_timers);
                 Console.WriteLine("  [+] Dynamic address space built");
+
+                var infoBits = new InfoBitsBuilder(this, root);
+                infoBits.Build();
+                Console.WriteLine("  [+] InfoBits address space built");
             }
 
             if (_config.EnableEvents)

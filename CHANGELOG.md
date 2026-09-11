@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.5.3 — 2026-09-11
+
+### Added — InfoBits nodes
+
+- **`TestServer/InfoBits/` folder** with four read-only `Double` variables whose `StatusCode` carries fixed DataValue InfoBits: `NoLimit` (`Good`), `LimitLow` (`0x00000500`), `LimitHigh` (`0x00000600`) and `LimitConstant` (`0x00000700`). Lets clients verify they decode the LimitBits, which no stock node produces. Built together with the Dynamic address space (`EnableDynamic`), so it is present on every server instance that has `TestServer/Dynamic`. Used by the `DataValue::limit()` integration tests in [`php-opcua/opcua-client`](https://github.com/php-opcua/opcua-client).
+
 ## v1.5.2 — 2026-06-10
 
 ### Fixed — Custom DataType nodes (ExtensionObjectsBuilder)

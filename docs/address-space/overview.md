@@ -81,6 +81,7 @@ Objects (ns=0;i=85)
     ├── DataTypes          # Scalars, arrays, matrices, analog
     ├── Methods            # 12 callable methods
     ├── Dynamic            # 13 time-varying variables
+    ├── InfoBits           # 4 fixed-status variables (LimitBits)
     ├── Events             # Single emitter object, three periodic BaseEventState timers
     ├── Alarms             # 3 alarms + 2 source variables
     ├── Historical         # 4 historized variables
@@ -118,6 +119,7 @@ top-level folders:
 | `DataTypes`         | `ns=1;s=TestServer/DataTypes`                  |
 | `Methods`           | `ns=1;s=TestServer/Methods`                    |
 | `Dynamic`           | `ns=1;s=TestServer/Dynamic`                    |
+| `InfoBits`          | `ns=1;s=TestServer/InfoBits`                   |
 | `Events`            | `ns=1;s=TestServer/Events`                     |
 | `Alarms`            | `ns=1;s=TestServer/Alarms`                     |
 | `Historical`        | `ns=1;s=TestServer/Historical`                 |
@@ -139,6 +141,7 @@ top-level folders:
 | Analog items (with EURange)       | 3            |
 | Methods                           | 12           |
 | Dynamic variables                 | 13           |
+| InfoBits variables                | 4            |
 | Event types (custom)              | **0** — the suite emits standard `BaseEventState` events from one emitter object; no custom event types are registered |
 | Alarms                            | 3 + 2 source |
 | Historical variables              | 4            |
@@ -160,6 +163,7 @@ Each section is opt-out via `OPCUA_ENABLE_*` env vars:
 | `DataTypes`      | *(always on)*                     | —       |
 | `Methods`        | `OPCUA_ENABLE_METHODS=false`      | on      |
 | `Dynamic`        | `OPCUA_ENABLE_DYNAMIC=false`      | on      |
+| `InfoBits`       | `OPCUA_ENABLE_DYNAMIC=false`      | on      |
 | `Events`         | `OPCUA_ENABLE_EVENTS=false`       | on      |
 | `Alarms`         | `OPCUA_ENABLE_EVENTS=false`       | on      |
 | `Historical`     | `OPCUA_ENABLE_HISTORICAL=false`   | on      |

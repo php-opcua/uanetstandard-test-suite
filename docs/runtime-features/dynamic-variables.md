@@ -114,6 +114,24 @@ alternation — over a long enough sample you should see ~1
 field is left at whatever the previous tick wrote — your client
 should treat it as absent rather than as a real number.
 
+## InfoBits (limit bits)
+
+A sibling folder, `TestServer/InfoBits/`, holds four read-only
+variables whose `StatusCode` carries fixed DataValue InfoBits. Nothing
+about them changes over time: they exist so a client can check that it
+decodes the LimitBits, which no stock node produces.
+
+| BrowseName      | Type   | Value | StatusCode   | Meaning                                          |
+| --------------- | ------ | ----- | ------------ | ------------------------------------------------ |
+| `NoLimit`       | Double | 50.0  | `0x00000000` | `Good`, no InfoBits                              |
+| `LimitLow`      | Double | 0.0   | `0x00000500` | `Good`, InfoType DataValue, LimitBits `Low`      |
+| `LimitHigh`     | Double | 100.0 | `0x00000600` | `Good`, InfoType DataValue, LimitBits `High`     |
+| `LimitConstant` | Double | 42.0  | `0x00000700` | `Good`, InfoType DataValue, LimitBits `Constant` |
+
+The folder is built together with `TestServer/Dynamic/`, so every
+server instance that has one has the other. The Overflow InfoBit needs
+no dedicated node — see [Queue overflow](#queue-overflow) below.
+
 ## Subscription test recipes
 
 ### Basic 1-Hz subscription
@@ -151,6 +169,19 @@ monitor(Dynamic/StatusVariable, filter = DataChangeFilter(trigger=Status))
 
 Compare to `trigger=StatusValue` (every value or status change)
 and `trigger=Value` (only value changes — fewer notifications).
+
+### Queue overflow
+
+```text
+subscribe(publishingInterval=1000)
+monitor(Dynamic/FastCounter, samplingInterval=100, queueSize=2)
+→ ~10 changes per publish into 2 slots: values are discarded every cycle
+→ the first value of each publish carries the Overflow InfoBit (0x00000480)
+```
+
+Repeat with `queueSize=1` and the bit never appears, even though values
+are still skipped: a single-slot queue overwrites by design, which is
+not an overflow.
 
 ## Note on update intervals
 
