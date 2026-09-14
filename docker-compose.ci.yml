@@ -16,6 +16,9 @@ services:
   opcua-all-security:
     restart: "no"
 
+  opcua-short-token-lifetime:
+    restart: "no"
+
   opcua-discovery:
     restart: "no"
 

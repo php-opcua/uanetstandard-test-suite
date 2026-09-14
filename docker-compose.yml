@@ -114,6 +114,30 @@ services:
         condition: service_completed_successfully
     restart: unless-stopped
 
+  # === Short Security Token Lifetime (Port 4850) ===
+  # Security tokens expire after 30 s, so a client must renew them (OPC UA Part 6 §6.7.4)
+  opcua-short-token-lifetime:
+    build: .
+    ports:
+      - "4850:4850"
+    volumes:
+      - ./certs:/app/certs
+      - ./config:/app/config:ro
+    environment:
+      OPCUA_PORT: "4850"
+      OPCUA_SERVER_NAME: "ShortTokenLifetimeServer"
+      OPCUA_SECURITY_POLICIES: "None,Basic256Sha256"
+      OPCUA_SECURITY_MODES: "None,Sign,SignAndEncrypt"
+      OPCUA_ALLOW_ANONYMOUS: "true"
+      OPCUA_AUTH_USERS: "false"
+      OPCUA_AUTH_CERTIFICATE: "false"
+      OPCUA_AUTO_ACCEPT_CERTS: "true"
+      OPCUA_SECURITY_TOKEN_LIFETIME: "30000"
+    depends_on:
+      certs-generator:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
   # === Server 5: Discovery Server (Port 4844) ===
   # OPC UA Discovery (FindServers, GetEndpoints)
   opcua-discovery:

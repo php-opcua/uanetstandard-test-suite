@@ -47,6 +47,9 @@ public class ServerConfig
     public bool EnableHttps { get; set; } = false;
     public int HttpsPort { get; set; } = 4852;
 
+    // Secure channel token lifetime in ms (TransportQuotas.SecurityTokenLifetime)
+    public int SecurityTokenLifetime { get; set; } = 3600000;
+
     // Operation Limits
     public int MaxNodesPerRead { get; set; } = 1000;
     public int MaxNodesPerWrite { get; set; } = 1000;
@@ -107,6 +110,7 @@ public class ServerConfig
         config.EnableHttps = GetEnvBool("OPCUA_ENABLE_HTTPS", config.EnableHttps);
         config.HttpsPort = GetEnvInt("OPCUA_HTTPS_PORT", config.HttpsPort);
 
+        config.SecurityTokenLifetime = GetEnvInt("OPCUA_SECURITY_TOKEN_LIFETIME", config.SecurityTokenLifetime);
         config.MaxNodesPerRead = GetEnvInt("OPCUA_MAX_NODES_PER_READ", config.MaxNodesPerRead);
         config.MaxNodesPerWrite = GetEnvInt("OPCUA_MAX_NODES_PER_WRITE", config.MaxNodesPerWrite);
         config.MaxNodesPerBrowse = GetEnvInt("OPCUA_MAX_NODES_PER_BROWSE", config.MaxNodesPerBrowse);

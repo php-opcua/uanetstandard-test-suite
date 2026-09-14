@@ -32,6 +32,7 @@ and exercise every protocol corner without having to set up a PLC.
 | 4847 | `opcua-legacy`           | Deprecated `Basic128Rsa15` / `Basic256`            |
 | 4848 | `opcua-ecc-nist`         | ECC NIST P-256 / P-384                             |
 | 4849 | `opcua-ecc-brainpool`    | ECC Brainpool P-256r1 / P-384r1                    |
+| 4850 | `opcua-short-token-lifetime` | 30 s security token, to test token renewal     |
 | 4851 | `opcua-sks`              | Part 14 §8.4.2 `GetSecurityKeys` RPC               |
 | 14850 (UDP) | `opcua-pubsub` + relay | UADP NetworkMessages on UDP                |
 

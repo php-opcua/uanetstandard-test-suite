@@ -38,6 +38,7 @@ Whether you're building an OPC UA client in Rust, C#, Python, Go, Java, PHP, or 
 | 4847 | Legacy Security | Deprecated policies (Basic128Rsa15, Basic256) |
 | 4848 | ECC NIST | ECC_nistP256, ECC_nistP384 |
 | 4849 | ECC Brainpool | ECC_brainpoolP256r1, ECC_brainpoolP384r1 |
+| 4850 | Short Token Lifetime | Security tokens expire after 30 s (token renewal) |
 | 14850 (UDP) | PubSub Publisher + relay | UADP NetworkMessages over UDP — subscriber-side testing (Part 14) |
 | 4851 | Security Key Service | OPC UA Part 14 §8.4.2 `GetSecurityKeys` for PubSub group-key rotation tests |
 
@@ -106,6 +107,7 @@ opc.tcp://localhost:4846/UA/TestServer   # Sign Only
 opc.tcp://localhost:4847/UA/TestServer   # Legacy
 opc.tcp://localhost:4848/UA/TestServer   # ECC NIST (P-256, P-384)
 opc.tcp://localhost:4849/UA/TestServer   # ECC Brainpool (P-256r1, P-384r1)
+opc.tcp://localhost:4850/UA/TestServer   # Short Token Lifetime (30 s security token)
 opc.udp://127.0.0.1:14850                # PubSub Publisher (UADP, via relay on host port 14850)
 opc.tcp://localhost:4851/UA/TestServer   # Security Key Service (GetSecurityKeys)
 ```

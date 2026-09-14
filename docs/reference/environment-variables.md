@@ -53,6 +53,7 @@ image, shaped by env, becomes any of the 12 services.
 | `OPCUA_MAX_SESSIONS`           | `100`       | Max concurrent sessions                         |
 | `OPCUA_MAX_SUBSCRIPTIONS`      | `100`       | Max concurrent subscriptions per session        |
 | `OPCUA_MIN_PUBLISHING_INTERVAL`| `100`       | Minimum publishing interval (ms)                |
+| `OPCUA_SECURITY_TOKEN_LIFETIME`| `3600000`   | Secure channel security token lifetime (ms)     |
 | `OPCUA_MAX_NODES_PER_READ`     | `1000`      | Max NodeIds in one Read request                 |
 | `OPCUA_MAX_NODES_PER_WRITE`    | `1000`      | Max NodeIds in one Write request                |
 | `OPCUA_MAX_NODES_PER_BROWSE`   | `1000`      | Max NodeIds in one Browse request               |

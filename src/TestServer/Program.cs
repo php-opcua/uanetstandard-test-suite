@@ -328,7 +328,7 @@ public static class Program
                 MaxMessageSize = 4194304,
                 MaxBufferSize = 65535,
                 ChannelLifetime = 300000,
-                SecurityTokenLifetime = 3600000
+                SecurityTokenLifetime = config.SecurityTokenLifetime
             },
 
             ServerConfiguration = new ServerConfiguration

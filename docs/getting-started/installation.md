@@ -16,7 +16,7 @@ next: { label: 'Quick start',  href: './quick-start.md' }
 ## Prerequisites
 
 - **Docker** with Compose v2 (`docker compose ...`).
-- **Free ports** on the host: 4840-4849 (TCP), 4851 (TCP), 14850
+- **Free ports** on the host: 4840-4851 (TCP), 14850
   (UDP). The discovery server uses 4844 with **no** resource path.
 - ~500 MB of disk for the image + generated certs.
 
@@ -40,6 +40,8 @@ That brings up (per `docker-compose.yml`):
   `opcua-auto-accept`, `opcua-sign-only`, `opcua-legacy`,
   `opcua-ecc-nist`, `opcua-ecc-brainpool` — host TCP ports
   4840-4849).
+- 1 short-token-lifetime server (`opcua-short-token-lifetime`, port 4850) whose
+  security tokens expire after 30 s, for token renewal tests.
 - 1 Security Key Service (`opcua-sks`, port 4851).
 - 1 PubSub publisher (`opcua-pubsub`) + 1 socat relay
   (`opcua-pubsub-relay`, UDP 14850 on the host).
@@ -107,7 +109,7 @@ Quick TCP probe:
 
 <!-- @code-block language="bash" label="terminal — probe" -->
 ```bash
-for port in 4840 4841 4842 4843 4844 4845 4846 4847 4848 4849 4851; do
+for port in 4840 4841 4842 4843 4844 4845 4846 4847 4848 4849 4850 4851; do
   nc -z localhost $port && echo "port $port: OK" || echo "port $port: FAIL"
 done
 ```

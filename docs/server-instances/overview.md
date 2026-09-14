@@ -35,8 +35,9 @@ codebase.
 | 8 | `opcua-legacy`         | 4847        | TestServer   | classic RSA   |
 | 9 | `opcua-ecc-nist`       | 4848        | TestServer   | classic ECC   |
 | 10 | `opcua-ecc-brainpool` | 4849        | TestServer   | classic ECC   |
-| 11 | `opcua-sks`            | 4851        | TestServer   | special (SKS) |
-| 12 | `opcua-pubsub` + `opcua-pubsub-relay` | UDP 14850 | TestPublisher | PubSub |
+| 11 | `opcua-short-token-lifetime` | 4850  | TestServer   | special       |
+| 12 | `opcua-sks`            | 4851        | TestServer   | special (SKS) |
+| 13 | `opcua-pubsub` + `opcua-pubsub-relay` | UDP 14850 | TestPublisher | PubSub |
 
 ## Which server, when?
 

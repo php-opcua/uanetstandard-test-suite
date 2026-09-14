@@ -1,5 +1,14 @@
 # Changelog
 
+## v1.5.5 — 2026-09-14
+
+### Added — Short security token lifetime server
+
+- **`opcua-short-token-lifetime`** docker-compose service on port 4850 (`None` and `Basic256Sha256`, modes `None`, `Sign`, `SignAndEncrypt`, anonymous) whose secure channel security tokens expire after 30 s, so clients must renew them (OPC UA Part 6 §6.7.4). Registered in `action.yml` as `short-token-lifetime` and in `docker-compose.ci.yml`.
+- **`OPCUA_SECURITY_TOKEN_LIFETIME`** (default `3600000`) sets `TransportQuotas.SecurityTokenLifetime`, previously fixed at one hour.
+
+Used by the token renewal integration tests in [`php-opcua/opcua-client`](https://github.com/php-opcua/opcua-client).
+
 ## v1.5.4 — 2026-09-14
 
 ### Added — Processed history (ReadProcessedDetails)
@@ -94,8 +103,8 @@ Used by the status code integration tests in [`php-opcua/opcua-client`](https://
 ### Changed
 
 - **Pinned UA-.NETStandard NuGet version to `1.5.378.134`** (previously `1.5.*`). The wildcard would auto-upgrade on every Docker build, which defeats the purpose of a stable interop counterpart: any upstream change to protocol semantics would silently break every client test run until someone noticed. Pinning makes NuGet upgrades an explicit decision.
-  - **Why 1.5.378.134 specifically:** it is the latest stable (released 2026-03-26) that predates the "Secure channel enhancements 2025 11" rework in UA-.NETStandard master (commit [`d188383`](https://github.com/OPCFoundation/UA-.NETStandard/commit/d188383), merged 2026-04-16). That rework turns on strict OPC UA 1.05.4 ECC behaviour — first sequence number for ECC policies MUST be 0, with wrap at `UInt32.MaxValue` — and adds `_AesGcm` / `_ChaChaPoly` policy variants. A client speaking 1.05.3 ECC against a strict server would fail at the first message.
-  - **When to bump:** once a client in the ecosystem (e.g. `php-opcua/opcua-client`) ships the 1.05.4 ECC fix, coordinate a bump here and in the client's integration tests in the same release train.
+    - **Why 1.5.378.134 specifically:** it is the latest stable (released 2026-03-26) that predates the "Secure channel enhancements 2025 11" rework in UA-.NETStandard master (commit [`d188383`](https://github.com/OPCFoundation/UA-.NETStandard/commit/d188383), merged 2026-04-16). That rework turns on strict OPC UA 1.05.4 ECC behaviour — first sequence number for ECC policies MUST be 0, with wrap at `UInt32.MaxValue` — and adds `_AesGcm` / `_ChaChaPoly` policy variants. A client speaking 1.05.3 ECC against a strict server would fail at the first message.
+    - **When to bump:** once a client in the ecosystem (e.g. `php-opcua/opcua-client`) ships the 1.05.4 ECC fix, coordinate a bump here and in the client's integration tests in the same release train.
 
 ## v1.1.0 — 2026-04-10
 

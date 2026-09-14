@@ -27,6 +27,7 @@ opc.tcp://localhost:4846/UA/TestServer   # Basic256Sha256+Sign only, anonymous+u
 opc.tcp://localhost:4847/UA/TestServer   # Basic128Rsa15+Basic256, legacy deprecated
 opc.tcp://localhost:4848/UA/TestServer   # ECC_nistP256+ECC_nistP384
 opc.tcp://localhost:4849/UA/TestServer   # ECC_brainpoolP256r1+ECC_brainpoolP384r1
+opc.tcp://localhost:4850/UA/TestServer   # None+Basic256Sha256, all modes, 30 s security token (renewal tests)
 opc.tcp://localhost:4851/UA/TestServer   # Security Key Service (GetSecurityKeys)
 opc.udp://127.0.0.1:14850                # PubSub UDP+UADP publisher (Part 14, via relay sidecar)
 ```
@@ -43,6 +44,7 @@ PORT  SERVICE               POLICIES                                          MO
 4845  opcua-auto-accept     Basic256Sha256                                    SignAndEncrypt         yes   yes   yes   yes
 4846  opcua-sign-only       Basic256Sha256                                    Sign                   yes   yes   no    yes
 4847  opcua-legacy          Basic128Rsa15,Basic256                            Sign,SignAndEncrypt    yes   yes   no    yes
+4850  opcua-short-token-lifetime  None,Basic256Sha256                         None,Sign,SignAndEncrypt  yes  no    no    yes          SecurityTokenLifetime=30000
 4848  opcua-ecc-nist        ECC_nistP256,ECC_nistP384                         Sign,SignAndEncrypt    yes   yes   yes   yes
 4849  opcua-ecc-brainpool   ECC_brainpoolP256r1,ECC_brainpoolP384r1           Sign,SignAndEncrypt    yes   yes   yes   yes
 4851  opcua-sks             None                                              None                   yes   no    no    yes          exposes GetSecurityKeys (ns=1;s=TestServer/SecurityKeyService)
@@ -515,6 +517,7 @@ OPCUA_ENABLE_METHODS          bool    true
 OPCUA_ENABLE_DYNAMIC          bool    true
 OPCUA_ENABLE_STRUCTURES       bool    true
 OPCUA_ENABLE_VIEWS            bool    true
+OPCUA_SECURITY_TOKEN_LIFETIME int     3600000     Secure channel security token lifetime (ms)
 OPCUA_MAX_NODES_PER_READ      int     0           Max nodes per Read request (0=unlimited)
 OPCUA_MAX_NODES_PER_WRITE     int     0           Max nodes per Write request (0=unlimited)
 OPCUA_MAX_NODES_PER_BROWSE    int     0           Max nodes per Browse request (0=unlimited)
