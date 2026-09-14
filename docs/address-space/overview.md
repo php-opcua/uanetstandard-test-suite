@@ -84,7 +84,7 @@ Objects (ns=0;i=85)
     ├── InfoBits           # 4 fixed-status variables (LimitBits)
     ├── Events             # Single emitter object, three periodic BaseEventState timers
     ├── Alarms             # 3 alarms + 2 source variables
-    ├── Historical         # 4 historized variables
+    ├── Historical         # 5 historized variables
     ├── Structures         # Nested objects, deep nesting
     ├── ExtensionObjects   # PointValue, RangeValue
     ├── Files              # 6 FileType + 1 FileDirectoryType (Part 5 File Transfer)
@@ -144,7 +144,7 @@ top-level folders:
 | InfoBits variables                | 4            |
 | Event types (custom)              | **0** — the suite emits standard `BaseEventState` events from one emitter object; no custom event types are registered |
 | Alarms                            | 3 + 2 source |
-| Historical variables              | 4            |
+| Historical variables              | 5            |
 | Structure objects                 | 4 + 5 collection + 10 deep |
 | Extension objects                 | 2            |
 | Access-control variables          | 50           |

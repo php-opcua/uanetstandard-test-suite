@@ -130,7 +130,8 @@ decodes the LimitBits, which no stock node produces.
 
 The folder is built together with `TestServer/Dynamic/`, so every
 server instance that has one has the other. The Overflow InfoBit needs
-no dedicated node — see [Queue overflow](#queue-overflow) below.
+no dedicated node — see the *Queue overflow* recipe in
+[Subscription test recipes](#subscription-test-recipes) below.
 
 ## Subscription test recipes
 

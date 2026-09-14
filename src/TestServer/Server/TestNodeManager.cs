@@ -380,6 +380,78 @@ public class TestNodeManager : CustomNodeManager2
         }
     }
 
+    /// <summary>
+    /// Computes processed history with the SDK's own aggregate calculators, so the
+    /// status codes of the result (BadAggregateNotSupported, BadNoData,
+    /// UncertainDataSubNormal, ...) are decided by the UA-.NETStandard stack.
+    /// </summary>
+    protected override void HistoryReadProcessed(
+        ServerSystemContext context,
+        ReadProcessedDetails details,
+        TimestampsToReturn timestampsToReturn,
+        IList<HistoryReadValueId> nodesToRead,
+        IList<HistoryReadResult> results,
+        IList<ServiceResult> errors,
+        List<NodeHandle> nodesToProcess,
+        IDictionary<NodeId, NodeState> cache)
+    {
+        for (var i = 0; i < nodesToProcess.Count; i++)
+        {
+            var handle = nodesToProcess[i];
+
+            if (!HistoryStore.TryGetValue(handle.NodeId, out var history))
+            {
+                errors[handle.Index] = StatusCodes.BadHistoryOperationUnsupported;
+                continue;
+            }
+
+            var aggregateId = handle.Index < details.AggregateType.Count ? details.AggregateType[handle.Index] : NodeId.Null;
+            if (!Server.AggregateManager.IsSupported(aggregateId))
+            {
+                errors[handle.Index] = StatusCodes.BadAggregateNotSupported;
+                continue;
+            }
+
+            var configuration = details.AggregateConfiguration == null || details.AggregateConfiguration.UseServerCapabilitiesDefaults
+                ? Server.AggregateManager.GetDefaultConfiguration(handle.NodeId)
+                : details.AggregateConfiguration;
+
+            var calculator = Server.AggregateManager.CreateCalculator(
+                aggregateId,
+                details.StartTime,
+                details.EndTime,
+                details.ProcessingInterval,
+                false,
+                configuration);
+
+            List<DataValue> raw;
+            lock (history)
+            {
+                raw = history.OrderBy(dv => dv.SourceTimestamp).ToList();
+            }
+
+            foreach (var value in raw)
+            {
+                calculator.QueueRawValue(value);
+            }
+
+            var historyData = new HistoryData();
+            var maxSlices = (int)Math.Ceiling(Math.Abs((details.EndTime - details.StartTime).TotalMilliseconds) / Math.Max(details.ProcessingInterval, 1.0)) + 2;
+            DataValue processed;
+            while (historyData.DataValues.Count < maxSlices && (processed = calculator.GetProcessedValue(true)) != null)
+            {
+                historyData.DataValues.Add(processed);
+            }
+
+            results[handle.Index] = new HistoryReadResult
+            {
+                HistoryData = new ExtensionObject(historyData),
+                StatusCode = StatusCodes.Good
+            };
+            errors[handle.Index] = StatusCodes.Good;
+        }
+    }
+
     protected override void Dispose(bool disposing)
     {
         if (disposing)

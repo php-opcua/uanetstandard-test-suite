@@ -39,12 +39,17 @@ public class HistoricalBuilder
             DataTypeIds.Boolean, ValueRanks.Scalar, false, historyReadAccess);
         histBool.Historizing = true;
 
+        var histWithBad = _mgr.CreateVariable<double>(folder, $"{p}/HistoricalWithBadSamples", "HistoricalWithBadSamples",
+            DataTypeIds.Double, ValueRanks.Scalar, 0.0, historyReadAccess);
+        histWithBad.Historizing = true;
+
         // Register history store in the node manager so HistoryRead can access it
         var historyStore = _mgr.HistoryStore;
         historyStore[histTemp.NodeId] = new List<DataValue>();
         historyStore[histPressure.NodeId] = new List<DataValue>();
         historyStore[histCounter.NodeId] = new List<DataValue>();
         historyStore[histBool.NodeId] = new List<DataValue>();
+        historyStore[histWithBad.NodeId] = new List<DataValue>();
 
         var rng = new Random();
         uint counterVal = 0;
@@ -82,10 +87,18 @@ public class HistoricalBuilder
             histBool.Timestamp = now;
             histBool.ClearChangeMasks(_context, false);
             AddHistoryValue(historyStore, histBool.NodeId, boolVal, now, maxHistorySize);
+
+            // Every fourth sample is Bad, so every aggregate interval mixes Good and Bad raw values
+            var sampleStatus = counterVal % 4 == 0 ? (StatusCode)StatusCodes.BadSensorFailure : (StatusCode)StatusCodes.Good;
+            histWithBad.Value = (double)counterVal;
+            histWithBad.StatusCode = sampleStatus;
+            histWithBad.Timestamp = now;
+            histWithBad.ClearChangeMasks(_context, false);
+            AddHistoryValue(historyStore, histWithBad.NodeId, (double)counterVal, now, maxHistorySize, sampleStatus);
         }, null, 1000, 1000));
     }
 
-    private static void AddHistoryValue(Dictionary<NodeId, List<DataValue>> store, NodeId nodeId, object value, DateTime timestamp, int maxSize)
+    private static void AddHistoryValue(Dictionary<NodeId, List<DataValue>> store, NodeId nodeId, object value, DateTime timestamp, int maxSize, StatusCode? statusCode = null)
     {
         var list = store[nodeId];
         lock (list)
@@ -93,7 +106,7 @@ public class HistoricalBuilder
             list.Add(new DataValue
             {
                 Value = value,
-                StatusCode = StatusCodes.Good,
+                StatusCode = statusCode ?? StatusCodes.Good,
                 SourceTimestamp = timestamp,
                 ServerTimestamp = timestamp
             });

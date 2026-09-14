@@ -1,6 +1,6 @@
 ---
 eyebrow: 'Docs · Runtime features'
-lede:    'Four historized variables, a 1-second recording interval, and HistoryRead support for raw, processed, and at-time queries. The history-test surface.'
+lede:    'Five historized variables, a 1-second recording interval, and HistoryRead support for raw and processed queries. The history-test surface.'
 
 see_also:
   - { href: './dynamic-variables.md',                       meta: '4 min' }
@@ -14,7 +14,7 @@ next: { label: 'File Transfer',  href: './file-transfer.md' }
 
 Path: `TestServer / Historical`
 
-Four variables with `accessLevel = CurrentRead + HistoryRead`.
+Five variables with `accessLevel = CurrentRead + HistoryRead`.
 The server records samples in-memory at 1 second intervals,
 buffering up to 10 000 samples per variable (rolling).
 
@@ -26,9 +26,10 @@ buffering up to 10 000 samples per variable (rolling).
 | `HistoricalPressure`    | Double   | `1013 + 20·cos(t / 45) + (rand·3 - 1.5)` — roughly `[992, 1034]`       |
 | `HistoricalCounter`     | UInt32   | Increments by 1 every second; the **first** historized value is `1`     |
 | `HistoricalBoolean`     | Boolean  | Toggles every ~5 s — deterministic, follows `(int)(t / 5) % 2 == 0`     |
+| `HistoricalWithBadSamples` | Double | The sample counter (`1, 2, 3, …`); every fourth sample has status `Bad_SensorFailure` |
 
 `t` is the elapsed seconds component of `DateTime.UtcNow.TimeOfDay`.
-All four are read-only (`R + HR`). `HistoricalCounter` initialises
+All five are read-only (`R + HR`). `HistoricalCounter` initialises
 to `0` but is incremented before the first sample is written to
 history, so the first historized value is `1`, not `0`.
 
@@ -49,13 +50,30 @@ start being overwritten.
 | Operation                  | Status in this server                                       |
 | -------------------------- | ----------------------------------------------------------- |
 | `ReadRawModifiedDetails`   | **Implemented** by `TestNodeManager.HistoryReadRawModified`. |
-| `ReadProcessedDetails`     | **Not implemented.** Falls through to the UA-.NETStandard base class, which returns `Bad_HistoryOperationUnsupported`. |
+| `ReadProcessedDetails`     | **Implemented** by `TestNodeManager.HistoryReadProcessed`, using the SDK's `AggregateManager` calculators. |
 | `ReadAtTimeDetails`        | **Not implemented.** Same as above — `Bad_HistoryOperationUnsupported`. |
 | `ReadEventDetails`         | **Not implemented.** No event history is recorded.           |
 
-Only the raw read path is exercised end-to-end. If your test
-matrix expects aggregates or at-time interpolation, the suite is
-not the right surface for it today.
+Raw and processed reads are exercised end-to-end; at-time
+interpolation is not available.
+
+## ReadProcessedDetails
+
+Processed values are computed by UA-.NETStandard's own aggregate
+calculators (`Server.AggregateManager`), fed with the recorded raw
+samples, so every status code in the result is the stack's decision:
+
+| Situation                                              | Result                                                       |
+| ------------------------------------------------------ | ------------------------------------------------------------ |
+| Aggregate NodeId the `AggregateManager` does not know  | Per-node `Bad_AggregateNotSupported` (`0x80D50000`)          |
+| Interval before the first recorded sample              | Processed value `Bad_NoData` (`0x809B0000`)                  |
+| Interval mixing Good and Bad raws (`HistoricalWithBadSamples`) | Processed value `Uncertain_DataSubNormal` (`0x40A40000`), with the `Calculated` historian bit |
+
+`UseServerCapabilitiesDefaults` selects the manager's default
+configuration (`PercentDataGood` = `PercentDataBad` = 100). With a 10 s
+processing interval, every interval of `HistoricalWithBadSamples`
+holds two or three Bad raws out of ten, so it is reported as
+`Uncertain_DataSubNormal`.
 
 ## ReadRawModifiedDetails
 

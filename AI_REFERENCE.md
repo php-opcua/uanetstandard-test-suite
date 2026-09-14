@@ -331,6 +331,7 @@ Historical/HistoricalTemperature    Double   1000ms  10000        22+8*sin(t/60)
 Historical/HistoricalPressure       Double   1000ms  10000        101.325+5*cos(t/120)+(random-0.5)
 Historical/HistoricalCounter        UInt32   1000ms  10000        ++counter
 Historical/HistoricalBoolean        Boolean  1000ms  10000        random()>0.5
+Historical/HistoricalWithBadSamples Double   1000ms  10000        counter; every 4th sample Bad_SensorFailure
 ```
 
 Recording interval: 1000ms (1 second). accessLevel = CurrentRead | HistoryRead. In-memory storage, not persisted across restarts.

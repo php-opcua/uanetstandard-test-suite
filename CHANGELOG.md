@@ -1,5 +1,14 @@
 # Changelog
 
+## v1.5.4 — 2026-09-14
+
+### Added — Processed history (ReadProcessedDetails)
+
+- **`TestNodeManager.HistoryReadProcessed`** computes processed history with UA-.NETStandard's own `AggregateManager` calculators over the recorded raw samples. Previously the base class answered `Bad_HistoryOperationUnsupported`. An unknown aggregate returns `Bad_AggregateNotSupported`, intervals before the first sample `Bad_NoData`, and intervals mixing Good and Bad raws `Uncertain_DataSubNormal` — all decided by the stack. `UseServerCapabilitiesDefaults` selects the manager's default configuration.
+- **`TestServer/Historical/HistoricalWithBadSamples`** — historized `Double` carrying the sample counter, with every fourth sample recorded as `Bad_SensorFailure`, so aggregate intervals mix Good and Bad raw values.
+
+Used by the status code integration tests in [`php-opcua/opcua-client`](https://github.com/php-opcua/opcua-client), which check `StatusCode` constants against the codes the stack actually returns.
+
 ## v1.5.3 — 2026-09-11
 
 ### Added — InfoBits nodes
